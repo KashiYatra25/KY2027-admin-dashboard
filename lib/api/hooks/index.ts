@@ -15,7 +15,7 @@ export { useAllUsers, useUpgradeToAdmin, type RegularUser, type PaginationInfo }
 export { useCAApplications, useApproveCA, useUpdateCAStatus } from "./useCAApplications";
 
 // Coupon hooks
-export { useCoupons, useCreateCoupon } from "./useCoupons";
+export { useCoupons, useCreateCoupon, useUpdateCoupon, useChangeCouponStatus, useDeleteCoupon } from "./useCoupons";
 
 // Schedule hooks
 export {

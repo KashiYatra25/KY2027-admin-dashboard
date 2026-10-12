@@ -14,7 +14,7 @@ import {
   type FestDay,
   type ScheduleEntry,
 } from "@/lib/api/hooks";
-import { AddVenueModal, EditVenueModal, DeleteVenueModal, AddScheduleEntryModal, DeleteScheduleEntryModal } from "@/components/modals";
+import { AddVenueModal, EditVenueModal, DeleteVenueModal, AddScheduleEntryModal, DeleteScheduleEntryModal, AddFestDayModal, EditFestDayModal, DeleteFestDayModal } from "@/components/modals";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -258,11 +258,25 @@ function VenuesTab() {
 function FestDaysTab() {
   const { festDays, count, isLoading, refetch } = useFestDays();
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [selectedFestDay, setSelectedFestDay] = useState<FestDay | null>(null);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
     await refetch();
     setTimeout(() => setIsRefreshing(false), 500);
+  };
+
+  const handleEdit = (festDay: FestDay) => {
+    setSelectedFestDay(festDay);
+    setIsEditModalOpen(true);
+  };
+
+  const handleDelete = (festDay: FestDay) => {
+    setSelectedFestDay(festDay);
+    setIsDeleteModalOpen(true);
   };
 
   return (
@@ -277,7 +291,7 @@ function FestDaysTab() {
             <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? "animate-spin" : ""}`} />
             Refresh
           </Button>
-          <Button size="sm">
+          <Button size="sm" onClick={() => setIsAddModalOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
             Add Day
           </Button>
@@ -291,7 +305,7 @@ function FestDaysTab() {
           <div className="p-12 text-center">
             <Calendar className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
             <p className="text-muted-foreground">No fest days configured</p>
-            <Button size="sm" className="mt-4">
+            <Button size="sm" className="mt-4" onClick={() => setIsAddModalOpen(true)}>
               <Plus className="h-4 w-4 mr-2" />
               Add First Day
             </Button>
@@ -333,10 +347,10 @@ function FestDaysTab() {
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-1">
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit(day)}>
                         <Pencil className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive">
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDelete(day)}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
@@ -347,6 +361,10 @@ function FestDaysTab() {
           </Table>
         )}
       </Card>
+
+      <AddFestDayModal open={isAddModalOpen} onOpenChange={setIsAddModalOpen} />
+      <EditFestDayModal open={isEditModalOpen} onOpenChange={setIsEditModalOpen} festDay={selectedFestDay} />
+      <DeleteFestDayModal open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen} festDay={selectedFestDay} />
     </div>
   );
 }

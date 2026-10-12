@@ -13,7 +13,7 @@ interface Props {
 }
 
 export function DeleteScheduleEntryModal({ open, onOpenChange, entry }: Props) {
-  const { deleteScheduleEntry, isPending, isSuccess, reset } = useDeleteScheduleEntry(entry?._id ?? "");
+  const { deleteEntry, isPending, isSuccess, reset } = useDeleteScheduleEntry(entry?._id ?? "");
 
   useEffect(() => {
     if (isSuccess) { reset(); onOpenChange(false); }
@@ -50,7 +50,7 @@ export function DeleteScheduleEntryModal({ open, onOpenChange, entry }: Props) {
 
         <DialogFooter>
           <Button variant="outline" size="sm" onClick={() => onOpenChange(false)} disabled={isPending}>Cancel</Button>
-          <Button variant="destructive" size="sm" onClick={() => deleteScheduleEntry({})} disabled={isPending}>
+          <Button variant="destructive" size="sm" onClick={() => deleteEntry({})} disabled={isPending}>
             {isPending ? <><Loader2 className="w-4 h-4 mr-1 animate-spin" />Deactivating...</> : <><Trash2 className="w-4 h-4 mr-1" />Deactivate</>}
           </Button>
         </DialogFooter>

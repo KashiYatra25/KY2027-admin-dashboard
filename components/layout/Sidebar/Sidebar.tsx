@@ -1,5 +1,5 @@
 "use client";
-import { LayoutDashboard, Users, Users2, GraduationCap, Settings, LogOut, X, Zap, Calendar } from "lucide-react";
+import { LayoutDashboard, Users, Users2, GraduationCap, Settings, LogOut, X, Zap, Calendar, Ticket } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSidebar } from "@/hooks/useSidebar";
 import { useAdminSession } from "@/lib/auth";
@@ -19,6 +19,7 @@ const mainNav = [
   { icon: Users2, label: "Users", href: "/users" },
   { icon: GraduationCap, label: "CA Applications", href: "/campus-ambassadors" },
   { icon: Calendar, label: "Schedule", href: "/schedule" },
+  { icon: Ticket, label: "Coupons", href: "/coupons" },
 ];
 
 const adminNav = [

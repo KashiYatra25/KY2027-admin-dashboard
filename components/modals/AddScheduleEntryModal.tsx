@@ -34,7 +34,7 @@ interface Props {
 }
 
 export function AddScheduleEntryModal({ open, onOpenChange }: Props) {
-  const { createScheduleEntry, isPending, isSuccess, reset: resetMutation } = useCreateScheduleEntry();
+  const { createEntry, isPending, isSuccess, reset: resetMutation } = useCreateScheduleEntry();
   const { venues } = useVenues();
 
   const { register, handleSubmit, setValue, watch, reset, formState: { errors } } = useForm<FormData>({
@@ -55,12 +55,10 @@ export function AddScheduleEntryModal({ open, onOpenChange }: Props) {
   }, [open, reset, resetMutation]);
 
   const onSubmit = (data: FormData) => {
-    const venue = venues.find(v => v.slug === data.venueSlug);
-    createScheduleEntry({
+    createEntry({
       eventSlug: data.eventSlug,
       categorySlug: data.categorySlug,
       venueSlug: data.venueSlug,
-      venueId: venue?._id ?? "",
       day: parseInt(data.day),
       startTime: data.startTime || undefined,
       endTime: data.endTime || undefined,
