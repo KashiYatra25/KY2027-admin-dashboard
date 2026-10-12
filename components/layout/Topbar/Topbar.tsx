@@ -1,5 +1,5 @@
 "use client";
-import { Search, Bell, Menu } from "lucide-react";
+import { Menu } from "lucide-react";
 import { useSidebar } from "@/hooks/useSidebar";
 import { useAdminSession } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
@@ -18,63 +18,47 @@ export default function Topbar() {
   const avatarUrl = admin?.googleAvatarUrl;
 
   return (
-    <header className="h-16 flex items-center justify-between px-4 md:px-6 lg:px-8 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-30">
+    <header 
+      className="h-16 flex items-center justify-between px-4 md:px-6 lg:px-8 border-b border-sidebar-border bg-sidebar sticky top-0 z-30"
+    >
       {/* Left section */}
       <div className="flex items-center gap-4">
         <Button
           variant="ghost"
           size="icon"
           onClick={() => setOpen(true)}
-          className="lg:hidden h-9 w-9"
+          className="lg:hidden h-9 w-9 text-sidebar-muted hover:text-sidebar-foreground hover:bg-sidebar-hover"
         >
           <Menu className="h-5 w-5" />
         </Button>
         
         <div className="hidden sm:block">
-          <p className="text-sm text-muted-foreground">
-            Welcome back, <span className="text-foreground font-medium">{displayName}</span> 👋
+          <p className="text-sm text-sidebar-muted">
+            Welcome back, <span className="font-medium text-sidebar-foreground">{displayName}</span> 👋
           </p>
         </div>
       </div>
 
       {/* Right section */}
       <div className="flex items-center gap-3">
-        {/* Search */}
-        <div className="hidden md:flex items-center gap-2 bg-muted/50 rounded-lg px-3 py-2 w-64 border border-transparent focus-within:border-border focus-within:bg-background transition-all">
-          <Search className="h-4 w-4 text-muted-foreground" />
-          <input
-            placeholder="Search..."
-            className="bg-transparent text-sm outline-none w-full placeholder:text-muted-foreground"
-          />
-          <kbd className="hidden lg:inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
-            ⌘K
-          </kbd>
-        </div>
-
-        <Button variant="ghost" size="icon" className="md:hidden h-9 w-9">
-          <Search className="h-5 w-5" />
-        </Button>
-
         <ThemeToggle />
 
-        {/* Notifications */}
-        <Button variant="ghost" size="icon" className="relative h-9 w-9">
-          <Bell className="h-5 w-5" />
-          <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-blue-500" />
-        </Button>
-
         {/* Divider */}
-        <div className="h-8 w-px bg-border mx-1" />
+        <div className="h-8 w-px mx-1 bg-sidebar-border" />
 
         {/* User info */}
         <div className="flex items-center gap-3">
           <div className="hidden sm:block text-right">
-            <p className="text-sm font-medium leading-none">{displayName}</p>
-            <p className="text-xs text-muted-foreground mt-1">{admin?.role || "Admin"}</p>
+            <p className="text-sm font-medium leading-none text-sidebar-foreground">
+              {displayName}
+            </p>
+            <p className="text-xs mt-1 text-sidebar-muted">
+              {admin?.role || "Admin"}
+            </p>
           </div>
-          <Avatar className="h-10 w-10 border-2 border-border">
+          <Avatar className="h-10 w-10 border-2 border-sidebar-border">
             {avatarUrl && <AvatarImage src={avatarUrl} alt={displayName} />}
-            <AvatarFallback className="bg-zinc-800 text-white text-sm font-semibold">
+            <AvatarFallback className="text-sm font-semibold bg-sidebar-hover text-sidebar-foreground">
               {initials}
             </AvatarFallback>
           </Avatar>

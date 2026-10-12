@@ -4,11 +4,46 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* ─── NPROGRESS ───────────────────────────────────────────── */
+#nprogress {
+  pointer-events: none;
+}
+
+#nprogress .bar {
+  background: var(--primary);
+  position: fixed;
+  z-index: 9999;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 3px;
+}
+
+#nprogress .peg {
+  display: block;
+  position: absolute;
+  right: 0px;
+  width: 100px;
+  height: 100%;
+  box-shadow: 0 0 10px var(--primary), 0 0 5px var(--primary);
+  opacity: 1;
+  transform: rotate(3deg) translate(0px, -4px);
+}
+
+/* Royal theme - gold progress bar */
+.royal #nprogress .bar {
+  background: linear-gradient(90deg, #d4a853 0%, #ffd700 50%, #d4a853 100%);
+}
+
+.royal #nprogress .peg {
+  box-shadow: 0 0 10px #d4a853, 0 0 5px #ffd700;
+}
+
 /* ─── LIGHT THEME ─────────────────────────────────────────── */
 :root {
   --background:        #ffffff;
   --foreground:        #09090b;
-  --card:              #ffffff;
+  --card:              #f8f8f9;
   --card-foreground:   #09090b;
   --popover:           #ffffff;
   --popover-foreground:#09090b;
@@ -26,19 +61,26 @@
   --ring:              #18181b;
   --radius:            0.625rem;
 
+  /* Theme font */
+  --font-theme: var(--font-inter), system-ui, sans-serif;
+
   /* Status colors */
   --success:    #22c55e;
   --warning:    #f59e0b;
   --error:      #ef4444;
   --info:       #3b82f6;
 
-  /* Sidebar - always dark */
-  --sidebar-bg:     #09090b;
-  --sidebar-text:   #fafafa;
-  --sidebar-muted:  #a1a1aa;
-  --sidebar-border: #27272a;
-  --sidebar-hover:  #18181b;
-  --sidebar-active: #ffffff;
+  /* Sidebar - same as main background */
+  --sidebar-bg:     #ffffff;
+  --sidebar-text:   #09090b;
+  --sidebar-muted:  #71717a;
+  --sidebar-border: #e4e4e7;
+  --sidebar-hover:  #f4f4f5;
+  --sidebar-active: #18181b;
+
+  /* Topbar - same as main background */
+  --topbar-bg:      #ffffff;
+  --topbar-border:  #e4e4e7;
 
   --chart-1: #18181b;
   --chart-2: #3b82f6;
@@ -51,9 +93,9 @@
 .dark {
   --background:        #09090b;
   --foreground:        #fafafa;
-  --card:              #0a0a0b;
+  --card:              #111113;
   --card-foreground:   #fafafa;
-  --popover:           #0a0a0b;
+  --popover:           #111113;
   --popover-foreground:#fafafa;
   --primary:           #fafafa;
   --primary-foreground:#18181b;
@@ -68,25 +110,318 @@
   --input:             #27272a;
   --ring:              #d4d4d8;
 
+  /* Theme font - Geist (default) */
+  --font-theme: var(--font-geist-sans), system-ui, sans-serif;
+
   /* Status colors - brighter for dark mode */
   --success:    #4ade80;
   --warning:    #fbbf24;
   --error:      #f87171;
   --info:       #60a5fa;
 
-  /* Sidebar */
-  --sidebar-bg:     #0a0a0b;
+  /* Sidebar - same as main background */
+  --sidebar-bg:     #09090b;
   --sidebar-text:   #fafafa;
   --sidebar-muted:  #71717a;
   --sidebar-border: #27272a;
   --sidebar-hover:  #18181b;
   --sidebar-active: #fafafa;
 
+  /* Topbar - same as main background */
+  --topbar-bg:      #09090b;
+  --topbar-border:  #27272a;
+
   --chart-1: #fafafa;
   --chart-2: #60a5fa;
   --chart-3: #4ade80;
   --chart-4: #fbbf24;
   --chart-5: #f87171;
+}
+
+/* ─── MIDNIGHT THEME (Deep Blue) ──────────────────────────── */
+.midnight {
+  --background:        #070b14;
+  --foreground:        #e2e8f0;
+  --card:              #0f1520;
+  --card-foreground:   #e2e8f0;
+  --popover:           #0f1520;
+  --popover-foreground:#e2e8f0;
+  --primary:           #22d3ee;
+  --primary-foreground:#070b14;
+  --secondary:         #1e293b;
+  --secondary-foreground:#e2e8f0;
+  --muted:             #1e293b;
+  --muted-foreground:  #94a3b8;
+  --accent:            #22d3ee;
+  --accent-foreground: #070b14;
+  --destructive:       #f87171;
+  --border:            #1e293b;
+  --input:             #1e293b;
+  --ring:              #22d3ee;
+
+  /* Theme font - Space Grotesk for techy/cyber feel */
+  --font-theme: var(--font-space-grotesk), system-ui, sans-serif;
+
+  --success:    #4ade80;
+  --warning:    #fbbf24;
+  --error:      #f87171;
+  --info:       #22d3ee;
+
+  /* Sidebar - matches main background */
+  --sidebar-bg:     #070b14;
+  --sidebar-text:   #e2e8f0;
+  --sidebar-muted:  #64748b;
+  --sidebar-border: #1e293b;
+  --sidebar-hover:  #0f1520;
+  --sidebar-active: #22d3ee;
+
+  /* Topbar - matches sidebar */
+  --topbar-bg:      #070b14;
+  --topbar-border:  #1e293b;
+
+  --chart-1: #22d3ee;
+  --chart-2: #818cf8;
+  --chart-3: #4ade80;
+  --chart-4: #fbbf24;
+  --chart-5: #f87171;
+}
+
+/* ─── SUNSET THEME (Warm Orange/Rose) ─────────────────────── */
+.sunset {
+  --background:        #1c1917;
+  --foreground:        #fef3c7;
+  --card:              #292524;
+  --card-foreground:   #fef3c7;
+  --popover:           #292524;
+  --popover-foreground:#fef3c7;
+  --primary:           #fb923c;
+  --primary-foreground:#1c1917;
+  --secondary:         #44403c;
+  --secondary-foreground:#fef3c7;
+  --muted:             #44403c;
+  --muted-foreground:  #a8a29e;
+  --accent:            #f97316;
+  --accent-foreground: #1c1917;
+  --destructive:       #ef4444;
+  --border:            #44403c;
+  --input:             #44403c;
+  --ring:              #fb923c;
+
+  /* Theme font - Outfit for warm friendly feel */
+  --font-theme: var(--font-outfit), system-ui, sans-serif;
+
+  --success:    #84cc16;
+  --warning:    #fbbf24;
+  --error:      #ef4444;
+  --info:       #fb923c;
+
+  --sidebar-bg:     #1c1917;
+  --sidebar-text:   #fef3c7;
+  --sidebar-muted:  #78716c;
+  --sidebar-border: #44403c;
+  --sidebar-hover:  #292524;
+  --sidebar-active: #fb923c;
+
+  --topbar-bg:      #1c1917;
+  --topbar-border:  #44403c;
+
+  --chart-1: #fb923c;
+  --chart-2: #f472b6;
+  --chart-3: #84cc16;
+  --chart-4: #fbbf24;
+  --chart-5: #ef4444;
+}
+
+/* ─── FOREST THEME (Dark Green/Nature) ────────────────────── */
+.forest {
+  --background:        #080f0b;
+  --foreground:        #e8f5e9;
+  --card:              #0f1a14;
+  --card-foreground:   #e8f5e9;
+  --popover:           #0f1a14;
+  --popover-foreground:#e8f5e9;
+  --primary:           #4ade80;
+  --primary-foreground:#080f0b;
+  --secondary:         #1a2e22;
+  --secondary-foreground:#e8f5e9;
+  --muted:             #1a2e22;
+  --muted-foreground:  #6ee7b7;
+  --accent:            #22c55e;
+  --accent-foreground: #080f0b;
+  --destructive:       #f87171;
+  --border:            #1a2e22;
+  --input:             #1a2e22;
+  --ring:              #4ade80;
+
+  /* Theme font - Sora for natural organic feel */
+  --font-theme: var(--font-sora), system-ui, sans-serif;
+
+  --success:    #4ade80;
+  --warning:    #fbbf24;
+  --error:      #f87171;
+  --info:       #22d3ee;
+
+  /* Sidebar - same as main background */
+  --sidebar-bg:     #080f0b;
+  --sidebar-text:   #e8f5e9;
+  --sidebar-muted:  #6ee7b7;
+  --sidebar-border: #1a2e22;
+  --sidebar-hover:  #0f1a14;
+  --sidebar-active: #4ade80;
+
+  /* Topbar - same as main background */
+  --topbar-bg:      #080f0b;
+  --topbar-border:  #1a2e22;
+
+  --chart-1: #4ade80;
+  --chart-2: #22d3ee;
+  --chart-3: #a3e635;
+  --chart-4: #fbbf24;
+  --chart-5: #f87171;
+}
+
+/* ─── LAVENDER THEME (Dark Purple/Violet) ─────────────────── */
+.lavender {
+  --background:        #0a0810;
+  --foreground:        #f3f0ff;
+  --card:              #13101c;
+  --card-foreground:   #f3f0ff;
+  --popover:           #13101c;
+  --popover-foreground:#f3f0ff;
+  --primary:           #a78bfa;
+  --primary-foreground:#0a0810;
+  --secondary:         #1e1a2e;
+  --secondary-foreground:#f3f0ff;
+  --muted:             #1e1a2e;
+  --muted-foreground:  #c4b5fd;
+  --accent:            #8b5cf6;
+  --accent-foreground: #f3f0ff;
+  --destructive:       #f87171;
+  --border:            #1e1a2e;
+  --input:             #1e1a2e;
+  --ring:              #a78bfa;
+
+  /* Theme font - Plus Jakarta Sans for elegant feel */
+  --font-theme: var(--font-jakarta), system-ui, sans-serif;
+
+  --success:    #4ade80;
+  --warning:    #fbbf24;
+  --error:      #f87171;
+  --info:       #a78bfa;
+
+  /* Sidebar - same as main background */
+  --sidebar-bg:     #0a0810;
+  --sidebar-text:   #f3f0ff;
+  --sidebar-muted:  #a78bfa;
+  --sidebar-border: #1e1a2e;
+  --sidebar-hover:  #13101c;
+  --sidebar-active: #c4b5fd;
+
+  /* Topbar - same as main background */
+  --topbar-bg:      #0a0810;
+  --topbar-border:  #1e1a2e;
+
+  --chart-1: #a78bfa;
+  --chart-2: #f472b6;
+  --chart-3: #4ade80;
+  --chart-4: #fbbf24;
+  --chart-5: #f87171;
+}
+
+/* ─── OCEAN THEME (Dark Teal/Cyan) ────────────────────────── */
+.ocean {
+  --background:        #060d12;
+  --foreground:        #e0f2fe;
+  --card:              #0c1620;
+  --card-foreground:   #e0f2fe;
+  --popover:           #0c1620;
+  --popover-foreground:#e0f2fe;
+  --primary:           #22d3ee;
+  --primary-foreground:#060d12;
+  --secondary:         #142028;
+  --secondary-foreground:#e0f2fe;
+  --muted:             #142028;
+  --muted-foreground:  #67e8f9;
+  --accent:            #06b6d4;
+  --accent-foreground: #060d12;
+  --destructive:       #f87171;
+  --border:            #142028;
+  --input:             #142028;
+  --ring:              #22d3ee;
+
+  /* Theme font - JetBrains Mono for technical feel */
+  --font-theme: var(--font-jetbrains), monospace;
+
+  --success:    #4ade80;
+  --warning:    #fbbf24;
+  --error:      #f87171;
+  --info:       #22d3ee;
+
+  /* Sidebar - same as main background */
+  --sidebar-bg:     #060d12;
+  --sidebar-text:   #e0f2fe;
+  --sidebar-muted:  #67e8f9;
+  --sidebar-border: #142028;
+  --sidebar-hover:  #0c1620;
+  --sidebar-active: #22d3ee;
+
+  /* Topbar - same as main background */
+  --topbar-bg:      #060d12;
+  --topbar-border:  #142028;
+
+  --chart-1: #22d3ee;
+  --chart-2: #38bdf8;
+  --chart-3: #4ade80;
+  --chart-4: #fbbf24;
+  --chart-5: #f87171;
+}
+
+/* ─── ROSE THEME (Dark Pink/Rose) ─────────────────────────── */
+.rose {
+  --background:        #0c0809;
+  --foreground:        #fff1f2;
+  --card:              #150f11;
+  --card-foreground:   #fff1f2;
+  --popover:           #150f11;
+  --popover-foreground:#fff1f2;
+  --primary:           #fb7185;
+  --primary-foreground:#0c0809;
+  --secondary:         #221a1c;
+  --secondary-foreground:#fff1f2;
+  --muted:             #221a1c;
+  --muted-foreground:  #fda4af;
+  --accent:            #f43f5e;
+  --accent-foreground: #fff1f2;
+  --destructive:       #ef4444;
+  --border:            #221a1c;
+  --input:             #221a1c;
+  --ring:              #fb7185;
+
+  /* Theme font - Crimson Pro for romantic elegant feel */
+  --font-theme: var(--font-crimson), Georgia, serif;
+
+  --success:    #4ade80;
+  --warning:    #fbbf24;
+  --error:      #ef4444;
+  --info:       #fb7185;
+
+  /* Sidebar - same as main background */
+  --sidebar-bg:     #0c0809;
+  --sidebar-text:   #fff1f2;
+  --sidebar-muted:  #fda4af;
+  --sidebar-border: #221a1c;
+  --sidebar-hover:  #150f11;
+  --sidebar-active: #fb7185;
+
+  /* Topbar - same as main background */
+  --topbar-bg:      #0c0809;
+  --topbar-border:  #221a1c;
+
+  --chart-1: #fb7185;
+  --chart-2: #f472b6;
+  --chart-3: #4ade80;
+  --chart-4: #fbbf24;
+  --chart-5: #ef4444;
 }
 
 /* ─── THEME MAPPING ───────────────────────────────────────── */
@@ -112,6 +447,15 @@
   --color-chart-3:            var(--chart-3);
   --color-chart-4:            var(--chart-4);
   --color-chart-5:            var(--chart-5);
+  
+  /* Sidebar colors */
+  --color-sidebar:            var(--sidebar-bg);
+  --color-sidebar-foreground: var(--sidebar-text);
+  --color-sidebar-muted:      var(--sidebar-muted);
+  --color-sidebar-border:     var(--sidebar-border);
+  --color-sidebar-hover:      var(--sidebar-hover);
+  --color-sidebar-active:     var(--sidebar-active);
+  
   --radius-sm:  calc(var(--radius) - 2px);
   --radius-md:  var(--radius);
   --radius-lg:  calc(var(--radius) + 2px);
@@ -122,7 +466,10 @@
 
 @layer base {
   * { @apply border-border; }
-  body { @apply bg-background text-foreground antialiased; }
+  body { 
+    @apply bg-background text-foreground antialiased;
+    font-family: var(--font-theme);
+  }
 }
 
 /* ─── SCROLLBAR ───────────────────────────────────────────── */
