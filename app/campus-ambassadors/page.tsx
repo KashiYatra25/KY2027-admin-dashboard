@@ -5,8 +5,8 @@ import { SidebarProvider } from "@/hooks";
 import { AuthGuard } from "@/components/auth";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Topbar } from "@/components/layout/Topbar";
-import { useCAApplications, useApproveCA } from "@/lib/api/hooks";
-import { RejectionModal } from "@/components/modals";
+import { useCAApplications, useApproveCA, useUpdateCAStatus } from "@/lib/api/hooks";
+import { RejectionModal, UpdateStatusModal } from "@/components/modals";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -35,6 +35,7 @@ import {
   TrendingUp,
   Download,
   Search,
+  RotateCcw,
 } from "lucide-react";
 import type { CAApplication, CAApplicationStatus } from "@/lib/api/helper/types";
 
@@ -151,6 +152,7 @@ type ExtendedCAApplication = CAApplication & {
 export default function CAApplicationsPage() {
   const { applications, isLoading, isError, refetch } = useCAApplications();
   const { approveCA, isPending: isApproving } = useApproveCA();
+  const { updateCAStatus, isPending: isUpdating } = useUpdateCAStatus();
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
 
@@ -160,6 +162,15 @@ export default function CAApplicationsPage() {
     applicationId: string | null;
     applicantName: string | null;
   }>({ isOpen: false, applicationId: null, applicantName: null });
+
+  // Update status modal state
+  const [updateModal, setUpdateModal] = useState<{
+    isOpen: boolean;
+    applicationId: string | null;
+    applicantName: string | null;
+    currentStatus: "ACCEPTED" | "REJECTED" | null;
+    referralId: string | null;
+  }>({ isOpen: false, applicationId: null, applicantName: null, currentStatus: null, referralId: null });
 
   // Prepare data with searchable fields
   const preparedData = useMemo(() => {
@@ -260,6 +271,49 @@ export default function CAApplicationsPage() {
   const closeRejectionModal = () => {
     if (!isApproving) {
       setRejectionModal({ isOpen: false, applicationId: null, applicantName: null });
+    }
+  };
+
+  // Update status modal handlers
+  const openUpdateModal = (app: CAApplication) => {
+    if (app.status === "PENDING") return; // Safety check
+    
+    const name =
+      app.user?.firstName || app.user?.lastName
+        ? `${app.user.firstName || ""} ${app.user.lastName || ""}`.trim()
+        : null;
+    
+    setUpdateModal({
+      isOpen: true,
+      applicationId: app.id,
+      applicantName: name,
+      currentStatus: app.status as "ACCEPTED" | "REJECTED",
+      referralId: app.caProfile?.referralId || null,
+    });
+  };
+
+  const handleUpdateStatus = (newStatus: "ACCEPTED" | "REJECTED", reason?: string) => {
+    if (!updateModal.applicationId) return;
+
+    setProcessingId(updateModal.applicationId);
+    updateCAStatus(
+      {
+        applicationId: updateModal.applicationId,
+        newStatus,
+        reason,
+      },
+      {
+        onSettled: () => {
+          setProcessingId(null);
+          setUpdateModal({ isOpen: false, applicationId: null, applicantName: null, currentStatus: null, referralId: null });
+        },
+      }
+    );
+  };
+
+  const closeUpdateModal = () => {
+    if (!isUpdating) {
+      setUpdateModal({ isOpen: false, applicationId: null, applicantName: null, currentStatus: null, referralId: null });
     }
   };
 
@@ -563,7 +617,22 @@ export default function CAApplicationsPage() {
                                           </Button>
                                         </div>
                                       ) : (
-                                        <span className="text-muted-foreground">—</span>
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => openUpdateModal(app)}
+                                          disabled={isUpdating || isProcessing}
+                                          className="gap-1.5 text-muted-foreground hover:text-foreground border-border/50"
+                                        >
+                                          {isProcessing ? (
+                                            <Loader2 className="w-4 h-4 animate-spin" />
+                                          ) : (
+                                            <>
+                                              <RotateCcw className="w-4 h-4" />
+                                              <span className="hidden sm:inline">Update</span>
+                                            </>
+                                          )}
+                                        </Button>
                                       )}
                                     </TableCell>
                                   </TableRow>
@@ -600,6 +669,17 @@ export default function CAApplicationsPage() {
           onConfirm={handleReject}
           isLoading={isApproving && processingId === rejectionModal.applicationId}
           applicantName={rejectionModal.applicantName ?? undefined}
+        />
+
+        {/* Update Status Modal */}
+        <UpdateStatusModal
+          isOpen={updateModal.isOpen}
+          onClose={closeUpdateModal}
+          onConfirm={handleUpdateStatus}
+          isLoading={isUpdating && processingId === updateModal.applicationId}
+          applicantName={updateModal.applicantName ?? undefined}
+          currentStatus={updateModal.currentStatus ?? "ACCEPTED"}
+          referralId={updateModal.referralId ?? undefined}
         />
       </SidebarProvider>
     </AuthGuard>

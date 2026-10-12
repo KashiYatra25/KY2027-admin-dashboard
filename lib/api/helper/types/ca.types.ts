@@ -10,6 +10,7 @@ export interface CAApplication {
   status: CAApplicationStatus;
   createdAt: string;
   updatedAt: string;
+  rejectionReason?: string | null;
   user?: {
     id: string;
     email: string;
@@ -18,6 +19,11 @@ export interface CAApplication {
     phone?: string;
     college?: string;
   };
+  caProfile?: {
+    id: string;
+    referralId: string;
+    numberOfReferrals: number;
+  } | null;
 }
 
 export interface ApproveCAData {

@@ -1,5 +1,6 @@
 "use client";
 
+import { useCallback } from "react";
 import { useApiQuery, useApiMutation } from "wire-axon/hooks";
 import { BACKEND_URL, sharedFeatureConfig } from "@/lib/api/constants";
 import { CreateCouponSchema } from "@/lib/api/utils/coupon.schema";
@@ -33,9 +34,9 @@ export function useCoupons() {
         staleTime: 1000 * 60 * 5, // 5 minutes - data considered fresh
         gcTime: 1000 * 60 * 30, // 30 minutes - cache garbage collection
         retry: (failureCount, error: any) => {
-          // Don't retry on auth errors (401, 403)
+          // Don't retry on auth errors (401, 403) or rate limiting (429)
           const status = error?.response?.status ?? error?.status;
-          if (status === 401 || status === 403) return false;
+          if (status === 401 || status === 403 || status === 429) return false;
           return failureCount < 3;
         },
       },
@@ -43,12 +44,14 @@ export function useCoupons() {
 
   const coupons: Coupon[] = data?.coupons ?? [];
 
+  const refetchCoupons = useCallback(() => refetch(), [refetch]);
+
   return {
     coupons,
     isLoading,
     isError,
     error,
-    refetch,
+    refetch: refetchCoupons,
   };
 }
 
@@ -87,11 +90,22 @@ export function useCreateCoupon(options?: UseCreateCouponOptions) {
           ),
         },
       },
-      mutationOptions: { retry: 3 },
+      mutationOptions: { 
+        retry: (failureCount, error: any) => {
+          const status = error?.response?.status ?? error?.status;
+          if (status === 401 || status === 403 || status === 429) return false;
+          return failureCount < 3;
+        },
+      },
     });
 
+  const createCoupon = useCallback(
+    (data: { code: string; discountType: string; discountValue: number; maxUses?: number; expiresAt?: string }, options?: Parameters<typeof mutate>[1]) => mutate(data, options),
+    [mutate]
+  );
+
   return {
-    createCoupon: mutate,
+    createCoupon,
     isPending,
     isSuccess,
     isError,
