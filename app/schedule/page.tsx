@@ -14,7 +14,7 @@ import {
   type FestDay,
   type ScheduleEntry,
 } from "@/lib/api/hooks";
-import { AddVenueModal, EditVenueModal, DeleteVenueModal } from "@/components/modals";
+import { AddVenueModal, EditVenueModal, DeleteVenueModal, AddScheduleEntryModal, DeleteScheduleEntryModal } from "@/components/modals";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -358,11 +358,19 @@ function FestDaysTab() {
 function ScheduleEntriesTab() {
   const { entries, count, isLoading, refetch } = useScheduleEntries();
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [selectedEntry, setSelectedEntry] = useState<ScheduleEntry | null>(null);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
     await refetch();
     setTimeout(() => setIsRefreshing(false), 500);
+  };
+
+  const handleDelete = (entry: ScheduleEntry) => {
+    setSelectedEntry(entry);
+    setIsDeleteModalOpen(true);
   };
 
   return (
@@ -377,7 +385,7 @@ function ScheduleEntriesTab() {
             <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? "animate-spin" : ""}`} />
             Refresh
           </Button>
-          <Button size="sm">
+          <Button size="sm" onClick={() => setIsAddModalOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
             Add Entry
           </Button>
@@ -391,7 +399,7 @@ function ScheduleEntriesTab() {
           <div className="p-12 text-center">
             <Clock className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
             <p className="text-muted-foreground">No schedule entries found</p>
-            <Button size="sm" className="mt-4">
+            <Button size="sm" className="mt-4" onClick={() => setIsAddModalOpen(true)}>
               <Plus className="h-4 w-4 mr-2" />
               Add First Entry
             </Button>
@@ -437,7 +445,7 @@ function ScheduleEntriesTab() {
                       <Button variant="ghost" size="icon" className="h-8 w-8">
                         <Pencil className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive">
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDelete(entry)}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
@@ -448,6 +456,9 @@ function ScheduleEntriesTab() {
           </Table>
         )}
       </Card>
+
+      <AddScheduleEntryModal open={isAddModalOpen} onOpenChange={setIsAddModalOpen} />
+      <DeleteScheduleEntryModal open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen} entry={selectedEntry} />
     </div>
   );
 }
