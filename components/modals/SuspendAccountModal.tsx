@@ -1,6 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -8,6 +11,20 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { X, Loader2, AlertTriangle, Ban } from "lucide-react";
 import type { RegularUser } from "@/lib/api/hooks";
+
+// ═══════════════════════════════════════════════════════════════════
+// SCHEMA
+// ═══════════════════════════════════════════════════════════════════
+
+const MIN_CHARS = 10;
+
+const SuspendFormSchema = z.object({
+  reason: z
+    .string()
+    .min(MIN_CHARS, `Reason must be at least ${MIN_CHARS} characters long`),
+});
+
+type SuspendFormData = z.infer<typeof SuspendFormSchema>;
 
 // ═══════════════════════════════════════════════════════════════════
 // SUSPEND ACCOUNT MODAL
@@ -28,26 +45,37 @@ export function SuspendAccountModal({
   onSuspend,
   isPending,
 }: SuspendAccountModalProps) {
-  const [reason, setReason] = useState("");
-  const [error, setError] = useState("");
+  const {
+    register,
+    handleSubmit,
+    watch,
+    reset,
+    formState: { errors, isValid },
+  } = useForm<SuspendFormData>({
+    resolver: zodResolver(SuspendFormSchema),
+    defaultValues: {
+      reason: "",
+    },
+    mode: "onChange",
+  });
+
+  const reason = watch("reason");
+
+  // Reset form when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      reset({ reason: "" });
+    }
+  }, [isOpen, reset]);
 
   if (!isOpen || !user) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-
-    if (reason.trim().length < 10) {
-      setError("Reason must be at least 10 characters long");
-      return;
-    }
-
-    onSuspend(reason.trim());
+  const onSubmit = (data: SuspendFormData) => {
+    onSuspend(data.reason.trim());
   };
 
   const handleClose = () => {
-    setReason("");
-    setError("");
+    reset({ reason: "" });
     onClose();
   };
 
@@ -82,7 +110,7 @@ export function SuspendAccountModal({
           </div>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
             {/* User info */}
             <div className="p-4 rounded-lg bg-muted/50 space-y-2">
               <div className="flex items-center justify-between">
@@ -128,18 +156,16 @@ export function SuspendAccountModal({
               </Label>
               <Textarea
                 id="reason"
-                value={reason}
-                onChange={(e) => {
-                  setReason(e.target.value);
-                  if (error) setError("");
-                }}
+                {...register("reason")}
                 placeholder="Please provide a detailed reason for suspending this account (min 10 characters)..."
                 className="min-h-[100px] resize-none"
                 disabled={isPending}
               />
-              {error && <p className="text-xs text-red-500">{error}</p>}
+              {errors.reason && (
+                <p className="text-xs text-red-500">{errors.reason.message}</p>
+              )}
               <p className="text-xs text-muted-foreground">
-                {reason.length}/10 characters minimum
+                {reason?.length || 0}/{MIN_CHARS} characters minimum
               </p>
             </div>
 
@@ -157,7 +183,7 @@ export function SuspendAccountModal({
                 type="submit"
                 variant="destructive"
                 className="flex-1"
-                disabled={isPending || reason.trim().length < 10}
+                disabled={isPending || !isValid}
               >
                 {isPending ? (
                   <>

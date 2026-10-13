@@ -69,7 +69,7 @@ export function useCoupons() {
 export function useCreateCoupon() {
   const { mutate, isPending, isSuccess, isError, error, reset } =
     useApiMutation<CouponMutationResponse>({
-      url: "/admin/coupon",
+      url: "/admin/coupons",
       method: "post",
       baseURL: BACKEND_URL,
       featureConfig: sharedFeatureConfig,

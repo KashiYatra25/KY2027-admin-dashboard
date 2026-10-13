@@ -1,6 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import {
   Dialog,
   DialogContent,
@@ -13,7 +16,27 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { AlertTriangle, Loader2, XCircle, CheckCircle2, Info } from "lucide-react";
-import { cn } from "cn";
+import { cn } from "@/lib/utils";
+
+// ═══════════════════════════════════════════════════════════════════
+// SCHEMA
+// ═══════════════════════════════════════════════════════════════════
+
+const MIN_CHARS = 10;
+const MAX_CHARS = 500;
+
+const RejectionFormSchema = z.object({
+  reason: z
+    .string()
+    .min(MIN_CHARS, `Please provide at least ${MIN_CHARS} characters`)
+    .max(MAX_CHARS, `Reason cannot exceed ${MAX_CHARS} characters`),
+});
+
+type RejectionFormData = z.infer<typeof RejectionFormSchema>;
+
+// ═══════════════════════════════════════════════════════════════════
+// COMPONENT
+// ═══════════════════════════════════════════════════════════════════
 
 interface RejectionModalProps {
   isOpen: boolean;
@@ -22,9 +45,6 @@ interface RejectionModalProps {
   isLoading?: boolean;
   applicantName?: string;
 }
-
-const MIN_CHARS = 10;
-const MAX_CHARS = 500;
 
 // Common rejection reasons for quick selection
 const QUICK_REASONS = [
@@ -41,53 +61,48 @@ export function RejectionModal({
   isLoading = false,
   applicantName,
 }: RejectionModalProps) {
-  const [reason, setReason] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [touched, setTouched] = useState(false);
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    watch,
+    reset,
+    formState: { errors, isValid, touchedFields },
+  } = useForm<RejectionFormData>({
+    resolver: zodResolver(RejectionFormSchema),
+    defaultValues: {
+      reason: "",
+    },
+    mode: "onChange",
+  });
 
-  // Reset state when modal opens
-  useEffect(() => {
-    if (isOpen) {
-      setReason("");
-      setError(null);
-      setTouched(false);
-    }
-  }, [isOpen]);
-
-  const charCount = reason.length;
+  const reason = watch("reason");
+  const charCount = reason?.length || 0;
   const charsRemaining = MIN_CHARS - charCount;
   const isValidLength = charCount >= MIN_CHARS && charCount <= MAX_CHARS;
   const isOverLimit = charCount > MAX_CHARS;
+  const touched = touchedFields.reason;
 
-  const handleConfirm = () => {
-    setTouched(true);
-    if (reason.trim().length < MIN_CHARS) {
-      setError(`Please provide at least ${MIN_CHARS} characters`);
-      return;
+  // Reset form when modal opens/closes
+  useEffect(() => {
+    if (isOpen) {
+      reset({ reason: "" });
     }
-    if (reason.trim().length > MAX_CHARS) {
-      setError(`Reason cannot exceed ${MAX_CHARS} characters`);
-      return;
-    }
-    setError(null);
-    onConfirm(reason.trim());
+  }, [isOpen, reset]);
+
+  const onSubmit = (data: RejectionFormData) => {
+    onConfirm(data.reason.trim());
   };
 
   const handleClose = () => {
     if (!isLoading) {
-      setReason("");
-      setError(null);
-      setTouched(false);
+      reset({ reason: "" });
       onClose();
     }
   };
 
   const handleQuickReason = (quickReason: string) => {
-    setReason(quickReason);
-    setTouched(true);
-    if (error && quickReason.length >= MIN_CHARS) {
-      setError(null);
-    }
+    setValue("reason", quickReason, { shouldValidate: true, shouldTouch: true });
   };
 
   return (
@@ -119,7 +134,7 @@ export function RejectionModal({
           </div>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           {/* Quick reason chips */}
           <div className="space-y-2">
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -159,21 +174,12 @@ export function RejectionModal({
               <Textarea
                 id="rejection-reason"
                 placeholder="Provide a clear reason that will help the applicant understand why their application was rejected..."
-                value={reason}
-                onChange={(e) => {
-                  const newValue = e.target.value;
-                  setReason(newValue);
-                  setTouched(true);
-                  if (error && newValue.trim().length >= MIN_CHARS && newValue.trim().length <= MAX_CHARS) {
-                    setError(null);
-                  }
-                }}
-                onBlur={() => setTouched(true)}
-                aria-invalid={!!error || isOverLimit}
+                {...register("reason")}
+                aria-invalid={!!errors.reason || isOverLimit}
                 className={cn(
                   "min-h-[140px] resize-none pr-4 pb-8 transition-colors",
                   "focus:ring-red-500/30 focus:border-red-500/50",
-                  (error || isOverLimit) && "border-red-500 ring-2 ring-red-500/20"
+                  (errors.reason || isOverLimit) && "border-red-500 ring-2 ring-red-500/20"
                 )}
                 disabled={isLoading}
                 maxLength={MAX_CHARS + 50} // Allow slight overflow for UX
@@ -198,10 +204,10 @@ export function RejectionModal({
 
             {/* Status message */}
             <div className="flex items-center gap-2 min-h-[20px]">
-              {error ? (
+              {errors.reason ? (
                 <div className="flex items-center gap-1.5 text-red-500">
                   <XCircle className="h-3.5 w-3.5 flex-shrink-0" />
-                  <span className="text-xs font-medium">{error}</span>
+                  <span className="text-xs font-medium">{errors.reason.message}</span>
                 </div>
               ) : isOverLimit ? (
                 <div className="flex items-center gap-1.5 text-red-500">
@@ -229,42 +235,43 @@ export function RejectionModal({
               )}
             </div>
           </div>
-        </div>
 
-        {/* Footer with action buttons */}
-        <DialogFooter className="gap-2 sm:gap-2">
-          <Button
-            variant="outline"
-            onClick={handleClose}
-            disabled={isLoading}
-            className="flex-1 sm:flex-none"
-          >
-            Cancel
-          </Button>
-          <Button
-            variant="destructive"
-            onClick={handleConfirm}
-            disabled={isLoading || !isValidLength}
-            className={cn(
-              "flex-1 sm:flex-none min-w-[140px] gap-2",
-              "bg-red-600 hover:bg-red-700 text-white",
-              "dark:bg-red-600 dark:hover:bg-red-700",
-              "disabled:bg-red-600/50 disabled:text-white/70"
-            )}
-          >
-            {isLoading ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <span>Rejecting...</span>
-              </>
-            ) : (
-              <>
-                <XCircle className="w-4 h-4" />
-                <span>Reject Application</span>
-              </>
-            )}
-          </Button>
-        </DialogFooter>
+          {/* Footer with action buttons */}
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleClose}
+              disabled={isLoading}
+              className="flex-1 sm:flex-none"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              variant="destructive"
+              disabled={isLoading || !isValid}
+              className={cn(
+                "flex-1 sm:flex-none min-w-[140px] gap-2",
+                "bg-red-600 hover:bg-red-700 text-white",
+                "dark:bg-red-600 dark:hover:bg-red-700",
+                "disabled:bg-red-600/50 disabled:text-white/70"
+              )}
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Rejecting...</span>
+                </>
+              ) : (
+                <>
+                  <XCircle className="w-4 h-4" />
+                  <span>Reject Application</span>
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );

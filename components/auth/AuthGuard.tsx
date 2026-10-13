@@ -4,6 +4,7 @@ import { useEffect, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { useAdminSession } from "@/lib/auth";
 import { FullPageLoader } from "@/components/ui/Loader";
+import { SuspendedOverlay } from "./SuspendedOverlay";
 
 // ═══════════════════════════════════════════════════════════════════
 // TYPES
@@ -21,11 +22,12 @@ interface AuthGuardProps {
 // Behaviour:
 // 1. Loading → Show loader
 // 2. Authenticated → Render children
-// 3. Expired or No Access → Redirect to /login
+// 3. Suspended → Show SuspendedOverlay (blur with lock)
+// 4. Expired or No Access → Redirect to /login
 // ═══════════════════════════════════════════════════════════════════
 
 export function AuthGuard({ children }: AuthGuardProps) {
-  const { isAuthenticated, isLoading, isExpired, hasNoAccess } = useAdminSession();
+  const { isAuthenticated, isLoading, isExpired, hasNoAccess, isSuspended } = useAdminSession();
   const router = useRouter();
 
   useEffect(() => {
@@ -38,6 +40,19 @@ export function AuthGuard({ children }: AuthGuardProps) {
   // Still validating session with server
   if (isLoading) {
     return <FullPageLoader text="Validating session..." />;
+  }
+
+  // Account is suspended - show suspended overlay
+  if (isSuspended) {
+    return (
+      <>
+        {/* Render children blurred behind the overlay */}
+        <div className="pointer-events-none select-none blur-sm opacity-50">
+          {children}
+        </div>
+        <SuspendedOverlay />
+      </>
+    );
   }
 
   // Not authenticated — show loader while the redirect effect runs

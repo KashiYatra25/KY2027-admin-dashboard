@@ -61,8 +61,9 @@ const UpgradeToAdminSchema = z.object({
   role: z.enum(["MANAGER", "OPERATOR"]),
 });
 
-const SuspendAccountSchema = z.object({
+const ChangeAccountStatusSchema = z.object({
   targetEmail: z.string().email(),
+  action: z.enum(["SUSPEND", "REACTIVATE"]),
   reason: z.string().min(10).optional(),
 });
 
@@ -201,42 +202,45 @@ export function useUpgradeToAdmin(options?: UseUpgradeToAdminOptions) {
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// SUSPEND ACCOUNT HOOK
+// CHANGE ACCOUNT STATUS HOOK (SUSPEND / REACTIVATE)
 // ═══════════════════════════════════════════════════════════════════
 
-interface SuspendAccountResponse {
+interface ChangeAccountStatusResponse {
   info: string;
-  suspendedUserId: string;
+  userId: string;
   role: string;
-  suspendedBy: string;
-  suspendedOn: string;
+  action: "SUSPEND" | "REACTIVATE";
+  performedBy: string;
+  performedAt: string;
 }
 
-interface UseSuspendAccountOptions {
+interface UseChangeAccountStatusOptions {
   successToast?: React.ReactElement;
   errorToast?: React.ReactElement;
 }
 
 /**
- * Hook to suspend a user account.
+ * Hook to change account status (suspend or reactivate).
  * Hierarchy:
- * - MASTER_ADMIN can suspend: MANAGER, OPERATOR, USER
- * - MANAGER can suspend: OPERATOR, USER
+ * - MASTER_ADMIN can change: MANAGER, OPERATOR, USER
+ * - MANAGER can change: OPERATOR, USER
  */
-export function useSuspendAccount(options?: UseSuspendAccountOptions) {
+export function useChangeAccountStatus(options?: UseChangeAccountStatusOptions) {
+  const [lastAction, setLastAction] = useState<"SUSPEND" | "REACTIVATE" | null>(null);
+
   const { mutate, isPending, isSuccess, isError, error, reset } =
-    useApiMutation<SuspendAccountResponse>({
-      url: "/admin/suspend-account",
+    useApiMutation<ChangeAccountStatusResponse>({
+      url: "/admin/change-account-status",
       method: "post",
       baseURL: BACKEND_URL,
       featureConfig: sharedFeatureConfig,
-      bodyValidator: { bodySchema: SuspendAccountSchema },
+      bodyValidator: { bodySchema: ChangeAccountStatusSchema },
       invalidateQueryName: ["all-users", "admin-users"],
       toastConfig: {
         successConfig: {
           customToast: options?.successToast ?? (
             <SuccessToast
-              title="Account suspended"
+              title={lastAction === "SUSPEND" ? "Account suspended" : "Account reactivated"}
               description="User has been notified via email"
             />
           ),
@@ -244,7 +248,7 @@ export function useSuspendAccount(options?: UseSuspendAccountOptions) {
         errorConfig: {
           customToast: options?.errorToast ?? (
             <ErrorToast
-              title="Suspension failed"
+              title={lastAction === "SUSPEND" ? "Suspension failed" : "Reactivation failed"}
               description="Please try again later"
             />
           ),
@@ -259,16 +263,36 @@ export function useSuspendAccount(options?: UseSuspendAccountOptions) {
       },
     });
 
-  const suspendAccount = useCallback(
+  const changeAccountStatus = useCallback(
     (
-      data: { targetEmail: string; reason?: string },
+      data: { targetEmail: string; action: "SUSPEND" | "REACTIVATE"; reason?: string },
       mutationOptions?: Parameters<typeof mutate>[1]
-    ) => mutate(data, mutationOptions),
+    ) => {
+      setLastAction(data.action);
+      mutate(data, mutationOptions);
+    },
     [mutate]
   );
 
+  // Convenience methods
+  const suspendAccount = useCallback(
+    (targetEmail: string, reason?: string, mutationOptions?: Parameters<typeof mutate>[1]) => {
+      changeAccountStatus({ targetEmail, action: "SUSPEND", reason }, mutationOptions);
+    },
+    [changeAccountStatus]
+  );
+
+  const reactivateAccount = useCallback(
+    (targetEmail: string, reason?: string, mutationOptions?: Parameters<typeof mutate>[1]) => {
+      changeAccountStatus({ targetEmail, action: "REACTIVATE", reason }, mutationOptions);
+    },
+    [changeAccountStatus]
+  );
+
   return {
+    changeAccountStatus,
     suspendAccount,
+    reactivateAccount,
     isPending,
     isSuccess,
     isError,

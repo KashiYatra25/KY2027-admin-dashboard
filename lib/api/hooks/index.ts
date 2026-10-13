@@ -9,7 +9,7 @@ export { useChangePassword } from "./useChangePassword";
 export { useAdminUsers, useInviteAdmin } from "./useAdminUsers";
 
 // All Users hooks (regular users, not admins)
-export { useAllUsers, useUpgradeToAdmin, useSuspendAccount, type RegularUser, type PaginationInfo } from "./useAllUsers";
+export { useAllUsers, useUpgradeToAdmin, useChangeAccountStatus, type RegularUser, type PaginationInfo } from "./useAllUsers";
 
 // CA Application hooks
 export { useCAApplications, useApproveCA, useUpdateCAStatus } from "./useCAApplications";

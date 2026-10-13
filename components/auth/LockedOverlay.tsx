@@ -10,8 +10,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Button } from "@/components/ui/button";
-import type { ComponentProps } from "react";
 
 // ═══════════════════════════════════════════════════════════════════
 // LOCKED OVERLAY
@@ -20,7 +18,7 @@ import type { ComponentProps } from "react";
 // Shows tooltip with required role on hover.
 // ═══════════════════════════════════════════════════════════════════
 
-const ROLE_DISPLAY_NAMES: Record<RoleLevel, string> = {
+export const ROLE_DISPLAY_NAMES: Record<RoleLevel, string> = {
   MASTER_ADMIN: "Master Admin",
   MANAGER: "Manager",
   OPERATOR: "Operator",
@@ -83,90 +81,6 @@ export function LockedOverlay({
               </div>
             )}
           </div>
-        </TooltipTrigger>
-        <TooltipContent side="top" className="flex items-center gap-2">
-          <Lock className="h-3 w-3" />
-          <span>{message}</span>
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════════════
-// PERMISSION GATE
-//
-// Conditionally renders children based on permission.
-// Shows fallback if user lacks permission.
-// ═══════════════════════════════════════════════════════════════════
-
-interface PermissionGateProps {
-  /** Permission required to render children */
-  permission: Permission;
-  /** Content to render if user has permission */
-  children: React.ReactNode;
-  /** Content to render if user lacks permission (optional) */
-  fallback?: React.ReactNode;
-}
-
-export function PermissionGate({
-  permission,
-  children,
-  fallback = null,
-}: PermissionGateProps) {
-  const { can } = usePermission();
-
-  if (can(permission)) {
-    return <>{children}</>;
-  }
-
-  return <>{fallback}</>;
-}
-
-// ═══════════════════════════════════════════════════════════════════
-// LOCKED BUTTON
-//
-// A button that shows lock icon and is disabled if user lacks permission.
-// ═══════════════════════════════════════════════════════════════════
-
-type ButtonProps = ComponentProps<typeof Button>;
-
-interface LockedButtonProps extends ButtonProps {
-  /** Permission required to enable this button */
-  permission: Permission;
-  /** Custom message for tooltip */
-  customMessage?: string;
-}
-
-export function LockedButton({
-  permission,
-  children,
-  customMessage,
-  className,
-  ...props
-}: LockedButtonProps) {
-  const { can } = usePermission();
-  const hasAccess = can(permission);
-
-  const minRole = PERMISSION_MIN_ROLE[permission];
-  const message = customMessage || `Requires ${ROLE_DISPLAY_NAMES[minRole]} role`;
-
-  if (hasAccess) {
-    return (
-      <Button className={className} {...props}>
-        {children}
-      </Button>
-    );
-  }
-
-  return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger>
-          <Button className={cn("gap-2", className)} disabled {...props}>
-            <Lock className="h-3 w-3" />
-            {children}
-          </Button>
         </TooltipTrigger>
         <TooltipContent side="top" className="flex items-center gap-2">
           <Lock className="h-3 w-3" />

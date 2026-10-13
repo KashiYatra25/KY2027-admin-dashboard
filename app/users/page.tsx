@@ -5,9 +5,9 @@ import { SidebarProvider } from "@/hooks";
 import { AuthGuard, ManagerGuard } from "@/components/auth";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Topbar } from "@/components/layout/Topbar";
-import { useAllUsers, useUpgradeToAdmin, useSuspendAccount, type RegularUser } from "@/lib/api/hooks";
+import { useAllUsers, useUpgradeToAdmin, useChangeAccountStatus, type RegularUser } from "@/lib/api/hooks";
 import { useAdminSession } from "@/lib/auth";
-import { SuspendAccountModal } from "@/components/modals";
+import { SuspendAccountModal, ReactivateAccountModal } from "@/components/modals";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -269,7 +269,7 @@ export default function UsersPage() {
   });
 
   const { upgradeToAdmin, isPending: isUpgrading } = useUpgradeToAdmin();
-  const { suspendAccount, isPending: isSuspending } = useSuspendAccount();
+  const { suspendAccount, reactivateAccount, isPending: isChangingStatus } = useChangeAccountStatus();
   
   const [upgradeModal, setUpgradeModal] = useState<{
     isOpen: boolean;
@@ -277,6 +277,11 @@ export default function UsersPage() {
   }>({ isOpen: false, user: null });
 
   const [suspendModal, setSuspendModal] = useState<{
+    isOpen: boolean;
+    user: RegularUser | null;
+  }>({ isOpen: false, user: null });
+
+  const [reactivateModal, setReactivateModal] = useState<{
     isOpen: boolean;
     user: RegularUser | null;
   }>({ isOpen: false, user: null });
@@ -329,6 +334,10 @@ export default function UsersPage() {
     setSuspendModal({ isOpen: true, user });
   };
 
+  const openReactivateModal = (user: RegularUser) => {
+    setReactivateModal({ isOpen: true, user });
+  };
+
   const handleUpgrade = (role: "MANAGER" | "OPERATOR") => {
     if (!upgradeModal.user) return;
     upgradeToAdmin(
@@ -345,10 +354,25 @@ export default function UsersPage() {
   const handleSuspend = (reason: string) => {
     if (!suspendModal.user) return;
     suspendAccount(
-      { targetEmail: suspendModal.user.email, reason },
+      suspendModal.user.email,
+      reason,
       {
         onSuccess: () => {
           setSuspendModal({ isOpen: false, user: null });
+          refetch();
+        },
+      }
+    );
+  };
+
+  const handleReactivate = (reason: string) => {
+    if (!reactivateModal.user) return;
+    reactivateAccount(
+      reactivateModal.user.email,
+      reason,
+      {
+        onSuccess: () => {
+          setReactivateModal({ isOpen: false, user: null });
           refetch();
         },
       }
@@ -622,8 +646,16 @@ export default function UsersPage() {
                                           <span className="hidden sm:inline">Suspend</span>
                                         </Button>
                                       )}
-                                      {user.isSuspended && (
-                                        <span className="text-xs text-muted-foreground italic">Suspended</span>
+                                      {canUpgrade && user.isSuspended && (
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => openReactivateModal(user)}
+                                          className="gap-1.5 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 dark:text-emerald-400 border-border/50"
+                                        >
+                                          <RefreshCw className="w-4 h-4" />
+                                          <span className="hidden sm:inline">Reactivate</span>
+                                        </Button>
                                       )}
                                     </div>
                                   </TableCell>
@@ -688,7 +720,16 @@ export default function UsersPage() {
           onClose={() => setSuspendModal({ isOpen: false, user: null })}
           user={suspendModal.user}
           onSuspend={handleSuspend}
-          isPending={isSuspending}
+          isPending={isChangingStatus}
+        />
+
+        {/* Reactivate Modal */}
+        <ReactivateAccountModal
+          isOpen={reactivateModal.isOpen}
+          onClose={() => setReactivateModal({ isOpen: false, user: null })}
+          user={reactivateModal.user}
+          onReactivate={handleReactivate}
+          isPending={isChangingStatus}
         />
         </SidebarProvider>
       </ManagerGuard>

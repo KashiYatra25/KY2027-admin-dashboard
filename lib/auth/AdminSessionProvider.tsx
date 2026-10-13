@@ -93,9 +93,10 @@ export interface AdminSession {
   role: RoleLevel;
   firstName?: string | null;
   googleAvatarUrl?: string | null;
+  isSuspended?: boolean;
 }
 
-type SessionStatus = "loading" | "authenticated" | "expired" | "no-access";
+type SessionStatus = "loading" | "authenticated" | "suspended" | "expired" | "no-access";
 
 interface AdminSessionContextType {
   /** Current session data (null if not authenticated or expired) */
@@ -109,6 +110,7 @@ interface AdminSessionContextType {
   isLoading: boolean;
   isExpired: boolean;
   hasNoAccess: boolean;
+  isSuspended: boolean;
   /** Manually refresh session from server */
   refreshSession: () => Promise<void>;
   /** Clear session (for logout) */
@@ -188,8 +190,13 @@ export function AdminSessionProvider({ children }: AdminSessionProviderProps) {
     setUserExists(result.userExists);
 
     if (result.session) {
-      // Valid session
-      setStatus("authenticated");
+      // Check if user is suspended
+      if (result.session.isSuspended) {
+        setStatus("suspended");
+      } else {
+        // Valid session
+        setStatus("authenticated");
+      }
     } else if (result.userExists) {
       // User exists but session expired
       setStatus("expired");
@@ -249,6 +256,7 @@ export function AdminSessionProvider({ children }: AdminSessionProviderProps) {
         isLoading: status === "loading",
         isExpired: status === "expired",
         hasNoAccess: status === "no-access",
+        isSuspended: status === "suspended",
         refreshSession,
         clearSession,
         setSession,
