@@ -10,6 +10,8 @@ import type { RoleLevel } from "@/lib/auth";
 // ═══════════════════════════════════════════════════════════════════
 
 export type Permission =
+  | "view_users"
+  | "manage_users"
   | "view_admin_users"
   | "manage_admin_users"
   | "view_ca_applications"
@@ -33,6 +35,8 @@ export const ROLE_HIERARCHY: Record<RoleLevel, number> = {
  */
 export const ROLE_PERMISSIONS: Record<RoleLevel, Permission[]> = {
   MASTER_ADMIN: [
+    "view_users",
+    "manage_users",
     "view_admin_users",
     "manage_admin_users",
     "view_ca_applications",
@@ -43,16 +47,15 @@ export const ROLE_PERMISSIONS: Record<RoleLevel, Permission[]> = {
     "manage_settings",
   ],
   MANAGER: [
+    "view_users",
+    "manage_users",
     "view_admin_users",
     "view_ca_applications",
     "manage_ca_applications",
-    "view_coupons",
-    "manage_coupons",
     "view_settings",
   ],
   OPERATOR: [
-    "view_ca_applications",
-    "view_coupons",
+    "view_users",
     "view_settings",
   ],
 };
@@ -61,6 +64,8 @@ export const ROLE_PERMISSIONS: Record<RoleLevel, Permission[]> = {
  * Human-readable permission descriptions
  */
 export const PERMISSION_LABELS: Record<Permission, string> = {
+  view_users: "View users",
+  manage_users: "Suspend/promote users",
   view_admin_users: "View admin users",
   manage_admin_users: "Manage admin users",
   view_ca_applications: "View CA applications",
@@ -75,12 +80,14 @@ export const PERMISSION_LABELS: Record<Permission, string> = {
  * Minimum role required for each permission
  */
 export const PERMISSION_MIN_ROLE: Record<Permission, RoleLevel> = {
+  view_users: "OPERATOR",
+  manage_users: "MANAGER",
   view_admin_users: "MANAGER",
   manage_admin_users: "MASTER_ADMIN",
-  view_ca_applications: "OPERATOR",
+  view_ca_applications: "MANAGER",
   manage_ca_applications: "MANAGER",
-  view_coupons: "OPERATOR",
-  manage_coupons: "MANAGER",
+  view_coupons: "MASTER_ADMIN",
+  manage_coupons: "MASTER_ADMIN",
   view_settings: "OPERATOR",
   manage_settings: "MASTER_ADMIN",
 };

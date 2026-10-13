@@ -162,9 +162,12 @@ interface InviteModalProps {
   onClose: () => void;
   onInvite: (email: string, role: "MANAGER" | "OPERATOR") => void;
   isPending: boolean;
+  currentAdminRole?: "MASTER_ADMIN" | "MANAGER" | "OPERATOR";
 }
 
-function InviteModal({ isOpen, onClose, onInvite, isPending }: InviteModalProps) {
+function InviteModal({ isOpen, onClose, onInvite, isPending, currentAdminRole }: InviteModalProps) {
+  // Only MASTER_ADMIN can invite Managers, others can only invite Operators
+  const canInviteManager = currentAdminRole === "MASTER_ADMIN";
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<"MANAGER" | "OPERATOR">("OPERATOR");
 
@@ -186,7 +189,7 @@ function InviteModal({ isOpen, onClose, onInvite, isPending }: InviteModalProps)
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={handleClose}>
       <Card className="w-full max-w-md" onClick={(e) => e.stopPropagation()}>
-        <CardHeader className="relative">
+        <CardHeader className="relative pb-4">
           <Button
             variant="ghost"
             size="icon"
@@ -205,9 +208,9 @@ function InviteModal({ isOpen, onClose, onInvite, isPending }: InviteModalProps)
             </div>
           </div>
         </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div className="space-y-2">
+        <CardContent className="pt-2">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-3">
               <Label htmlFor="email">Email Address</Label>
               <Input
                 id="email"
@@ -223,28 +226,30 @@ function InviteModal({ isOpen, onClose, onInvite, isPending }: InviteModalProps)
               </p>
             </div>
             
-            <div className="space-y-2">
-              <Label>Role</Label>
-              <Tabs value={role} onValueChange={(v) => setRole(v as "MANAGER" | "OPERATOR")}>
-                <TabsList className="w-full bg-muted/50">
-                  <TabsTrigger value="MANAGER" className="flex-1 gap-2">
-                    <ShieldCheck className="w-4 h-4" />
-                    Manager
-                  </TabsTrigger>
-                  <TabsTrigger value="OPERATOR" className="flex-1 gap-2">
-                    <User className="w-4 h-4" />
-                    Operator
-                  </TabsTrigger>
-                </TabsList>
-              </Tabs>
-              <p className="text-xs text-muted-foreground">
-                {role === "MANAGER" 
-                  ? "Managers can invite operators and manage most resources."
-                  : "Operators have limited permissions for day-to-day tasks."}
-              </p>
-            </div>
+            {canInviteManager && (
+              <div className="space-y-3">
+                <Label>Role</Label>
+                <Tabs value={role} onValueChange={(v) => setRole(v as "MANAGER" | "OPERATOR")}>
+                  <TabsList className="w-full bg-muted/50">
+                    <TabsTrigger value="MANAGER" className="flex-1 gap-2">
+                      <ShieldCheck className="w-4 h-4" />
+                      Manager
+                    </TabsTrigger>
+                    <TabsTrigger value="OPERATOR" className="flex-1 gap-2">
+                      <User className="w-4 h-4" />
+                      Operator
+                    </TabsTrigger>
+                  </TabsList>
+                </Tabs>
+                <p className="text-xs text-muted-foreground">
+                  {role === "MANAGER" 
+                    ? "Managers can invite operators and manage most resources."
+                    : "Operators have limited permissions for day-to-day tasks."}
+                </p>
+              </div>
+            )}
             
-            <div className="flex gap-3 pt-2">
+            <div className="flex gap-3 pt-4">
               <Button type="button" variant="outline" className="flex-1" onClick={handleClose} disabled={isPending}>
                 Cancel
               </Button>
@@ -323,12 +328,20 @@ export default function AdminUsersPage() {
   const managerCount = admins.filter((a) => a.role?.level === "MANAGER").length;
   const operatorCount = admins.filter((a) => a.role?.level === "OPERATOR").length;
 
-  // Filter options for role
-  const roleFilterOptions = [
-    { label: "Master Admin", value: "MASTER_ADMIN", icon: <Crown className="w-4 h-4 text-amber-500" />, count: masterAdminCount },
-    { label: "Manager", value: "MANAGER", icon: <ShieldCheck className="w-4 h-4 text-blue-500" />, count: managerCount },
-    { label: "Operator", value: "OPERATOR", icon: <User className="w-4 h-4 text-violet-500" />, count: operatorCount },
-  ];
+  // Filter options for role - only show roles the user can see
+  const roleFilterOptions = useMemo(() => {
+    if (currentAdmin?.role === "MASTER_ADMIN") {
+      return [
+        { label: "Master Admin", value: "MASTER_ADMIN", icon: <Crown className="w-4 h-4 text-amber-500" />, count: masterAdminCount },
+        { label: "Manager", value: "MANAGER", icon: <ShieldCheck className="w-4 h-4 text-blue-500" />, count: managerCount },
+        { label: "Operator", value: "OPERATOR", icon: <User className="w-4 h-4 text-violet-500" />, count: operatorCount },
+      ];
+    }
+    // Managers can only see Operators
+    return [
+      { label: "Operator", value: "OPERATOR", icon: <User className="w-4 h-4 text-violet-500" />, count: operatorCount },
+    ];
+  }, [currentAdmin?.role, masterAdminCount, managerCount, operatorCount]);
 
   // Count active filters
   const activeFiltersCount = (searchQuery ? 1 : 0) + (roleFilter.length > 0 ? 1 : 0);
@@ -428,30 +441,32 @@ export default function AdminUsersPage() {
                 </div>
               </div>
 
-              {/* Stats */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-                <StatCard
-                  title="Master Admins"
-                  value={masterAdminCount}
-                  icon={Crown}
-                  iconClassName="bg-amber-500/10 text-amber-600 dark:text-amber-400"
-                  isLoading={isLoading}
-                />
-                <StatCard
-                  title="Managers"
-                  value={managerCount}
-                  icon={ShieldCheck}
-                  iconClassName="bg-blue-500/10 text-blue-600 dark:text-blue-400"
-                  isLoading={isLoading}
-                />
-                <StatCard
-                  title="Operators"
-                  value={operatorCount}
-                  icon={User}
-                  iconClassName="bg-violet-500/10 text-violet-600 dark:text-violet-400"
-                  isLoading={isLoading}
-                />
-              </div>
+              {/* Stats - Only show stats relevant to the user's role */}
+              {currentAdmin?.role === "MASTER_ADMIN" && (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+                  <StatCard
+                    title="Master Admins"
+                    value={masterAdminCount}
+                    icon={Crown}
+                    iconClassName="bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                    isLoading={isLoading}
+                  />
+                  <StatCard
+                    title="Managers"
+                    value={managerCount}
+                    icon={ShieldCheck}
+                    iconClassName="bg-blue-500/10 text-blue-600 dark:text-blue-400"
+                    isLoading={isLoading}
+                  />
+                  <StatCard
+                    title="Operators"
+                    value={operatorCount}
+                    icon={User}
+                    iconClassName="bg-violet-500/10 text-violet-600 dark:text-violet-400"
+                    isLoading={isLoading}
+                  />
+                </div>
+              )}
 
               {/* Table */}
               <Card>
@@ -493,12 +508,14 @@ export default function AdminUsersPage() {
                           onChange={setSearchQuery}
                           placeholder="Search by name or email..."
                         />
-                        <DataTableFilter
-                          title="Role"
-                          options={roleFilterOptions}
-                          selectedValues={roleFilter}
-                          onChange={setRoleFilter}
-                        />
+                        {currentAdmin?.role === "MASTER_ADMIN" && (
+                          <DataTableFilter
+                            title="Role"
+                            options={roleFilterOptions}
+                            selectedValues={roleFilter}
+                            onChange={setRoleFilter}
+                          />
+                        )}
                       </DataTableToolbar>
 
                       {/* Table content */}
@@ -616,6 +633,7 @@ export default function AdminUsersPage() {
           onClose={() => setShowInviteModal(false)}
           onInvite={handleInvite}
           isPending={isInviting}
+          currentAdminRole={currentAdmin?.role}
         />
         </SidebarProvider>
       </ManagerGuard>

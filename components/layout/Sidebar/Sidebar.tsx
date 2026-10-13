@@ -26,8 +26,8 @@ interface NavItem {
 // Main navigation - filtered by role
 const mainNavConfig: NavItem[] = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/" },
-  // Users: MASTER_ADMIN and MANAGER only
-  { icon: Users2, label: "Users", href: "/users", allowedRoles: ["MASTER_ADMIN", "MANAGER"] },
+  // Users: MASTER_ADMIN, MANAGER, and OPERATOR (OPERATOR has read-only access)
+  { icon: Users2, label: "Users", href: "/users", allowedRoles: ["MASTER_ADMIN", "MANAGER", "OPERATOR"] },
   // CA Applications: MASTER_ADMIN and MANAGER only
   { icon: GraduationCap, label: "CA Applications", href: "/campus-ambassadors", allowedRoles: ["MASTER_ADMIN", "MANAGER"] },
   // Teams: MASTER_ADMIN and MANAGER only

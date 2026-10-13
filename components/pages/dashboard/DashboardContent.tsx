@@ -2,8 +2,6 @@
 
 import { useAdminUsers, useCAApplications } from "@/lib/api/hooks";
 import { useAdminSession } from "@/lib/auth";
-import { usePermission } from "@/lib/permissions";
-import { LockedOverlay, LockedButton } from "@/components/auth";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
@@ -231,22 +229,22 @@ export function DashboardContent() {
         </div>
       </div>
 
-      {/* Admin Stats */}
-      <section>
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h2 className="text-lg font-semibold">Admin Team</h2>
-            <p className="text-sm text-muted-foreground">Team composition overview</p>
+      {/* Admin Stats - Only show to MASTER_ADMIN */}
+      {admin?.role === "MASTER_ADMIN" && (
+        <section>
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-lg font-semibold">Admin Team</h2>
+              <p className="text-sm text-muted-foreground">Team composition overview</p>
+            </div>
+            <Link href="/admin-users">
+              <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground hover:text-foreground">
+                Manage
+                <ArrowUpRight className="h-3.5 w-3.5" />
+              </Button>
+            </Link>
           </div>
-          <Link href="/admin-users">
-            <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground hover:text-foreground">
-              Manage
-              <ArrowUpRight className="h-3.5 w-3.5" />
-            </Button>
-          </Link>
-        </div>
-        
-        <LockedOverlay permission="view_admin_users">
+          
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <StatCard
               title="Total Admins"
@@ -278,8 +276,8 @@ export function DashboardContent() {
               isLoading={isLoadingAdmins}
             />
           </div>
-        </LockedOverlay>
-      </section>
+        </section>
+      )}
 
       {/* CA Applications */}
       <section>
@@ -345,20 +343,22 @@ export function DashboardContent() {
                     </div>
                   </Button>
                 </Link>
-                <Link href="/admin-users" className="block">
-                  <Button 
-                    variant="outline" 
-                    className="h-auto py-4 px-4 justify-start w-full hover:bg-blue-500/5 hover:border-blue-500/30 transition-all group"
-                  >
-                    <div className="h-12 w-12 rounded-xl bg-blue-500/10 flex items-center justify-center mr-4 group-hover:bg-blue-500/20 transition-colors">
-                      <Users className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                    </div>
-                    <div className="text-left">
-                      <p className="font-medium">Manage Team</p>
-                      <p className="text-xs text-muted-foreground">{totalAdmins} team members</p>
-                    </div>
-                  </Button>
-                </Link>
+                {admin?.role === "MASTER_ADMIN" && (
+                  <Link href="/admin-users" className="block">
+                    <Button 
+                      variant="outline" 
+                      className="h-auto py-4 px-4 justify-start w-full hover:bg-blue-500/5 hover:border-blue-500/30 transition-all group"
+                    >
+                      <div className="h-12 w-12 rounded-xl bg-blue-500/10 flex items-center justify-center mr-4 group-hover:bg-blue-500/20 transition-colors">
+                        <Users className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                      </div>
+                      <div className="text-left">
+                        <p className="font-medium">Manage Team</p>
+                        <p className="text-xs text-muted-foreground">{totalAdmins} team members</p>
+                      </div>
+                    </Button>
+                  </Link>
+                )}
                 <Link href="/settings" className="block">
                   <Button 
                     variant="outline" 

@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { SidebarProvider } from "@/hooks";
-import { AuthGuard, ManagerGuard } from "@/components/auth";
+import { AuthGuard, RoleGuard } from "@/components/auth";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Topbar } from "@/components/layout/Topbar";
 import { useAllUsers, useUpgradeToAdmin, useChangeAccountStatus, type RegularUser } from "@/lib/api/hooks";
@@ -135,9 +135,12 @@ interface UpgradeModalProps {
   user: RegularUser | null;
   onUpgrade: (role: "MANAGER" | "OPERATOR") => void;
   isPending: boolean;
+  currentAdminRole?: "MASTER_ADMIN" | "MANAGER" | "OPERATOR";
 }
 
-function UpgradeModal({ isOpen, onClose, user, onUpgrade, isPending }: UpgradeModalProps) {
+function UpgradeModal({ isOpen, onClose, user, onUpgrade, isPending, currentAdminRole }: UpgradeModalProps) {
+  // Only MASTER_ADMIN can create Managers, others can only create Operators
+  const canCreateManager = currentAdminRole === "MASTER_ADMIN";
   const [role, setRole] = useState<"MANAGER" | "OPERATOR">("OPERATOR");
 
   if (!isOpen || !user) return null;
@@ -192,20 +195,27 @@ function UpgradeModal({ isOpen, onClose, user, onUpgrade, isPending }: UpgradeMo
             {/* Role selection */}
             <div className="space-y-2">
               <Label>Admin Role</Label>
-              <Tabs value={role} onValueChange={(v) => setRole(v as "MANAGER" | "OPERATOR")}>
-                <TabsList className="w-full bg-muted/50">
-                  <TabsTrigger value="MANAGER" className="flex-1 gap-2">
-                    <ShieldCheck className="w-4 h-4" />
-                    Manager
-                  </TabsTrigger>
-                  <TabsTrigger value="OPERATOR" className="flex-1 gap-2">
-                    <User className="w-4 h-4" />
-                    Operator
-                  </TabsTrigger>
-                </TabsList>
-              </Tabs>
+              {canCreateManager ? (
+                <Tabs value={role} onValueChange={(v) => setRole(v as "MANAGER" | "OPERATOR")}>
+                  <TabsList className="w-full bg-muted/50">
+                    <TabsTrigger value="MANAGER" className="flex-1 gap-2">
+                      <ShieldCheck className="w-4 h-4" />
+                      Manager
+                    </TabsTrigger>
+                    <TabsTrigger value="OPERATOR" className="flex-1 gap-2">
+                      <User className="w-4 h-4" />
+                      Operator
+                    </TabsTrigger>
+                  </TabsList>
+                </Tabs>
+              ) : (
+                <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50 border">
+                  <User className="w-4 h-4 text-violet-600 dark:text-violet-400" />
+                  <span className="text-sm font-medium">Operator</span>
+                </div>
+              )}
               <p className="text-xs text-muted-foreground">
-                {role === "MANAGER"
+                {canCreateManager && role === "MANAGER"
                   ? "Managers can invite operators and manage most resources."
                   : "Operators have limited permissions for day-to-day tasks."}
               </p>
@@ -423,7 +433,7 @@ export default function UsersPage() {
 
   return (
     <AuthGuard>
-      <ManagerGuard>
+      <RoleGuard allowedRoles={["MASTER_ADMIN", "MANAGER", "OPERATOR"]}>
         <SidebarProvider>
           <div className="flex min-h-screen bg-background">
             <Sidebar />
@@ -712,6 +722,7 @@ export default function UsersPage() {
           user={upgradeModal.user}
           onUpgrade={handleUpgrade}
           isPending={isUpgrading}
+          currentAdminRole={currentAdmin?.role}
         />
 
         {/* Suspend Modal */}
@@ -732,7 +743,7 @@ export default function UsersPage() {
           isPending={isChangingStatus}
         />
         </SidebarProvider>
-      </ManagerGuard>
+      </RoleGuard>
     </AuthGuard>
   );
 }
