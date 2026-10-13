@@ -1,31 +1,62 @@
 "use client";
-import { LayoutDashboard, Users, Users2, GraduationCap, Settings, LogOut, X, Zap, Calendar, Ticket } from "lucide-react";
+import { LayoutDashboard, Users, Users2, GraduationCap, Settings, LogOut, X, Zap, Calendar, Ticket, ClipboardList } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSidebar } from "@/hooks/useSidebar";
-import { useAdminSession } from "@/lib/auth";
+import { useAdminSession, type RoleLevel } from "@/lib/auth";
 import { useAdminLogout } from "@/lib/api/hooks";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { useMemo } from "react";
 
 // ═══════════════════════════════════════════════════════════════════
-// NAVIGATION CONFIG
+// NAVIGATION CONFIG WITH ROLE-BASED ACCESS
 // ═══════════════════════════════════════════════════════════════════
 
-const mainNav = [
+interface NavItem {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  href: string;
+  /** Roles that can access this route. If undefined, all roles can access. */
+  allowedRoles?: RoleLevel[];
+}
+
+// Main navigation - filtered by role
+const mainNavConfig: NavItem[] = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/" },
-  { icon: Users2, label: "Users", href: "/users" },
-  { icon: GraduationCap, label: "CA Applications", href: "/campus-ambassadors" },
-  { icon: Calendar, label: "Schedule", href: "/schedule" },
-  { icon: Ticket, label: "Coupons", href: "/coupons" },
+  // Users: MASTER_ADMIN and MANAGER only
+  { icon: Users2, label: "Users", href: "/users", allowedRoles: ["MASTER_ADMIN", "MANAGER"] },
+  // CA Applications: MASTER_ADMIN and MANAGER only
+  { icon: GraduationCap, label: "CA Applications", href: "/campus-ambassadors", allowedRoles: ["MASTER_ADMIN", "MANAGER"] },
+  // Teams: MASTER_ADMIN and MANAGER only
+  { icon: Users, label: "Teams", href: "/teams", allowedRoles: ["MASTER_ADMIN", "MANAGER"] },
+  // Registrations: MASTER_ADMIN and MANAGER only
+  { icon: ClipboardList, label: "Registrations", href: "/registrations", allowedRoles: ["MASTER_ADMIN", "MANAGER"] },
+  // Schedule: MASTER_ADMIN and MANAGER only
+  { icon: Calendar, label: "Schedule", href: "/schedule", allowedRoles: ["MASTER_ADMIN", "MANAGER"] },
+  // Coupons: MASTER_ADMIN only
+  { icon: Ticket, label: "Coupons", href: "/coupons", allowedRoles: ["MASTER_ADMIN"] },
 ];
 
-const adminNav = [
-  { icon: Users, label: "Admin Users", href: "/admin-users" },
+// Admin navigation - filtered by role
+const adminNavConfig: NavItem[] = [
+  // Admin Users: MASTER_ADMIN and MANAGER only
+  { icon: Users, label: "Admin Users", href: "/admin-users", allowedRoles: ["MASTER_ADMIN", "MANAGER"] },
+  // Settings: All roles can access their own settings
   { icon: Settings, label: "Settings", href: "/settings" },
 ];
+
+// Filter nav items based on user role
+function filterNavByRole(navItems: NavItem[], userRole: RoleLevel | undefined): NavItem[] {
+  if (!userRole) return [];
+  return navItems.filter(item => {
+    // If no allowedRoles specified, all roles can access
+    if (!item.allowedRoles) return true;
+    return item.allowedRoles.includes(userRole);
+  });
+}
 
 export default function Sidebar() {
   const pathname = usePathname();
@@ -37,6 +68,10 @@ export default function Sidebar() {
   const displayName = email ? email.split("@")[0] : "Guest";
   const initials = (email ? email.slice(0, 2) : "GU").toUpperCase();
   const role = admin?.role ?? "Admin";
+
+  // Filter navigation based on user role
+  const mainNav = useMemo(() => filterNavByRole(mainNavConfig, admin?.role), [admin?.role]);
+  const adminNav = useMemo(() => filterNavByRole(adminNavConfig, admin?.role), [admin?.role]);
 
   const handleLogout = () => {
     logout();

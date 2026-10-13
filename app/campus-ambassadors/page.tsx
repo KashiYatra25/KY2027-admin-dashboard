@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { SidebarProvider } from "@/hooks";
-import { AuthGuard } from "@/components/auth";
+import { AuthGuard, ManagerGuard } from "@/components/auth";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Topbar } from "@/components/layout/Topbar";
 import { useCAApplications, useApproveCA, useUpdateCAStatus } from "@/lib/api/hooks";
@@ -359,13 +359,14 @@ export default function CAApplicationsPage() {
 
   return (
     <AuthGuard>
-      <SidebarProvider>
-        <div className="flex min-h-screen bg-background">
-          <Sidebar />
-          <div className="flex-1 flex flex-col ml-0 md:ml-16 lg:ml-60 min-w-0">
-            <Topbar />
-            <main className="flex-1 p-4 md:p-6 lg:p-8">
-              {/* Header */}
+      <ManagerGuard>
+        <SidebarProvider>
+          <div className="flex min-h-screen bg-background">
+            <Sidebar />
+            <div className="flex-1 flex flex-col ml-0 md:ml-16 lg:ml-60 min-w-0">
+              <Topbar />
+              <main className="flex-1 p-4 md:p-6 lg:p-8">
+                {/* Header */}
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
                 <div>
                   <div className="flex items-center gap-3">
@@ -681,7 +682,8 @@ export default function CAApplicationsPage() {
           currentStatus={updateModal.currentStatus ?? "ACCEPTED"}
           referralId={updateModal.referralId ?? undefined}
         />
-      </SidebarProvider>
+        </SidebarProvider>
+      </ManagerGuard>
     </AuthGuard>
   );
 }

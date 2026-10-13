@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { SidebarProvider } from "@/hooks";
-import { AuthGuard } from "@/components/auth";
+import { AuthGuard, MasterAdminGuard } from "@/components/auth";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Topbar } from "@/components/layout/Topbar";
 import { useCoupons, useCreateCoupon, useUpdateCoupon, useChangeCouponStatus, useDeleteCoupon } from "@/lib/api/hooks";
@@ -267,27 +267,28 @@ export default function CouponsPage() {
 
   return (
     <AuthGuard>
-      <SidebarProvider>
-        <div className="flex min-h-screen bg-background">
-          <Sidebar />
-          <div className="flex-1 flex flex-col ml-0 md:ml-16 lg:ml-60 min-w-0">
-            <Topbar />
-            <main className="flex-1 p-4 md:p-6 lg:p-8">
-              {/* Header */}
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
-                <div>
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-xl bg-violet-500/10 flex items-center justify-center">
-                      <Ticket className="h-5 w-5 text-violet-600 dark:text-violet-400" />
-                    </div>
-                    <div>
-                      <h1 className="text-2xl font-bold tracking-tight">Coupons</h1>
-                      <p className="text-muted-foreground text-sm">Manage discount coupons</p>
+      <MasterAdminGuard>
+        <SidebarProvider>
+          <div className="flex min-h-screen bg-background">
+            <Sidebar />
+            <div className="flex-1 flex flex-col ml-0 md:ml-16 lg:ml-60 min-w-0">
+              <Topbar />
+              <main className="flex-1 p-4 md:p-6 lg:p-8">
+                {/* Header */}
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+                  <div>
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-xl bg-violet-500/10 flex items-center justify-center">
+                        <Ticket className="h-5 w-5 text-violet-600 dark:text-violet-400" />
+                      </div>
+                      <div>
+                        <h1 className="text-2xl font-bold tracking-tight">Coupons</h1>
+                        <p className="text-muted-foreground text-sm">Manage discount coupons</p>
+                      </div>
                     </div>
                   </div>
-                </div>
-                <div className="flex gap-2">
-                  <Button
+                  <div className="flex gap-2">
+                    <Button
                     variant="outline"
                     size="sm"
                     onClick={() => refetch()}
@@ -573,7 +574,8 @@ export default function CouponsPage() {
           onConfirm={() => deleteCoupon({ couponId: deletingCoupon!.id }, { onSuccess: () => setDeletingCoupon(null) })}
           isPending={isDeleting}
         />
-      </SidebarProvider>
+        </SidebarProvider>
+      </MasterAdminGuard>
     </AuthGuard>
   );
 }

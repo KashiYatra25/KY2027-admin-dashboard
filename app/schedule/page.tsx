@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { SidebarProvider } from "@/hooks";
-import { AuthGuard } from "@/components/auth";
+import { AuthGuard, ManagerGuard } from "@/components/auth";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Topbar } from "@/components/layout/Topbar";
 import {
@@ -494,13 +494,14 @@ export default function SchedulePage() {
 
   return (
     <AuthGuard>
-      <SidebarProvider>
-        <div className="flex min-h-screen bg-background">
-          <Sidebar />
-          <div className="flex-1 flex flex-col ml-0 md:ml-16 lg:ml-60 min-w-0">
-            <Topbar />
-            <main className="flex-1 p-6 space-y-6 overflow-auto">
-              {/* Page Header */}
+      <ManagerGuard>
+        <SidebarProvider>
+          <div className="flex min-h-screen bg-background">
+            <Sidebar />
+            <div className="flex-1 flex flex-col ml-0 md:ml-16 lg:ml-60 min-w-0">
+              <Topbar />
+              <main className="flex-1 p-6 space-y-6 overflow-auto">
+                {/* Page Header */}
               <div>
                 <h1 className="text-3xl font-bold tracking-tight">Schedule Management</h1>
                 <p className="text-muted-foreground mt-1">
@@ -565,7 +566,8 @@ export default function SchedulePage() {
             </main>
           </div>
         </div>
-      </SidebarProvider>
+        </SidebarProvider>
+      </ManagerGuard>
     </AuthGuard>
   );
 }

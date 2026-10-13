@@ -26,7 +26,6 @@ export interface Coupon {
 }
 
 export interface CreateCouponData {
-  code: string;
   description?: string;
   type: CouponType;
   value: number;

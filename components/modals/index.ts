@@ -11,3 +11,4 @@ export { DeleteFestDayModal } from "./DeleteFestDayModal";
 export { CreateCouponModal } from "./CreateCouponModal";
 export { EditCouponModal } from "./EditCouponModal";
 export { DeleteCouponModal } from "./DeleteCouponModal";
+export { SuspendAccountModal } from "./SuspendAccountModal";

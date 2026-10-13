@@ -2,11 +2,12 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { SidebarProvider } from "@/hooks";
-import { AuthGuard } from "@/components/auth";
+import { AuthGuard, ManagerGuard } from "@/components/auth";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Topbar } from "@/components/layout/Topbar";
-import { useAllUsers, useUpgradeToAdmin, type RegularUser } from "@/lib/api/hooks";
+import { useAllUsers, useUpgradeToAdmin, useSuspendAccount, type RegularUser } from "@/lib/api/hooks";
 import { useAdminSession } from "@/lib/auth";
+import { SuspendAccountModal } from "@/components/modals";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -39,6 +40,7 @@ import {
   User,
   ChevronLeft,
   ChevronRight,
+  Ban,
 } from "lucide-react";
 
 // ═══════════════════════════════════════════════════════════════════
@@ -267,20 +269,33 @@ export default function UsersPage() {
   });
 
   const { upgradeToAdmin, isPending: isUpgrading } = useUpgradeToAdmin();
+  const { suspendAccount, isPending: isSuspending } = useSuspendAccount();
   
   const [upgradeModal, setUpgradeModal] = useState<{
     isOpen: boolean;
     user: RegularUser | null;
   }>({ isOpen: false, user: null });
 
+  const [suspendModal, setSuspendModal] = useState<{
+    isOpen: boolean;
+    user: RegularUser | null;
+  }>({ isOpen: false, user: null });
+
   // Filter by IIT BHU status (client-side for current page)
   const filteredUsers = useMemo(() => {
-    if (iitbhuFilter.length === 0) return users;
-    return users.filter((user) => {
-      if (iitbhuFilter.includes("iitbhu") && user.isFromIITBhu) return true;
-      if (iitbhuFilter.includes("external") && !user.isFromIITBhu) return true;
-      return false;
-    });
+    let result = users;
+    
+    // Filter by IIT BHU status
+    if (iitbhuFilter.length > 0) {
+      result = result.filter((user) => {
+        if (iitbhuFilter.includes("iitbhu") && user.isFromIITBhu) return true;
+        if (iitbhuFilter.includes("external") && !user.isFromIITBhu) return true;
+        if (iitbhuFilter.includes("suspended") && user.isSuspended) return true;
+        return false;
+      });
+    }
+    
+    return result;
   }, [users, iitbhuFilter]);
 
   // Stats (from current page - for accurate stats, backend should provide totals)
@@ -292,6 +307,7 @@ export default function UsersPage() {
   const iitbhuFilterOptions = [
     { label: "IIT BHU", value: "iitbhu", icon: <Building2 className="w-4 h-4 text-blue-500" />, count: iitbhuCount },
     { label: "External", value: "external", icon: <User className="w-4 h-4 text-gray-500" />, count: users.length - iitbhuCount },
+    { label: "Suspended", value: "suspended", icon: <Ban className="w-4 h-4 text-red-500" />, count: suspendedCount },
   ];
 
   const activeFiltersCount = (searchQuery ? 1 : 0) + (iitbhuFilter.length > 0 ? 1 : 0);
@@ -309,6 +325,10 @@ export default function UsersPage() {
     setUpgradeModal({ isOpen: true, user });
   };
 
+  const openSuspendModal = (user: RegularUser) => {
+    setSuspendModal({ isOpen: true, user });
+  };
+
   const handleUpgrade = (role: "MANAGER" | "OPERATOR") => {
     if (!upgradeModal.user) return;
     upgradeToAdmin(
@@ -316,6 +336,19 @@ export default function UsersPage() {
       {
         onSuccess: () => {
           setUpgradeModal({ isOpen: false, user: null });
+          refetch();
+        },
+      }
+    );
+  };
+
+  const handleSuspend = (reason: string) => {
+    if (!suspendModal.user) return;
+    suspendAccount(
+      { targetEmail: suspendModal.user.email, reason },
+      {
+        onSuccess: () => {
+          setSuspendModal({ isOpen: false, user: null });
           refetch();
         },
       }
@@ -366,18 +399,19 @@ export default function UsersPage() {
 
   return (
     <AuthGuard>
-      <SidebarProvider>
-        <div className="flex min-h-screen bg-background">
-          <Sidebar />
-          <div className="flex-1 flex flex-col ml-0 md:ml-16 lg:ml-60 min-w-0">
-            <Topbar />
-            <main className="flex-1 p-4 md:p-6 lg:p-8">
-              {/* Header */}
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
-                <div>
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
-                      <Users2 className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+      <ManagerGuard>
+        <SidebarProvider>
+          <div className="flex min-h-screen bg-background">
+            <Sidebar />
+            <div className="flex-1 flex flex-col ml-0 md:ml-16 lg:ml-60 min-w-0">
+              <Topbar />
+              <main className="flex-1 p-4 md:p-6 lg:p-8">
+                {/* Header */}
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+                  <div>
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+                        <Users2 className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
                     </div>
                     <div>
                       <h1 className="text-2xl font-bold tracking-tight">Users</h1>
@@ -519,18 +553,11 @@ export default function UsersPage() {
                                         </AvatarFallback>
                                       </Avatar>
                                       <div className="min-w-0">
-                                        <div className="flex items-center gap-2">
-                                          <p className="font-medium text-foreground truncate">
-                                            {user.firstName || user.lastName
-                                              ? `${user.firstName || ""} ${user.lastName || ""}`.trim()
-                                              : user.slugName}
-                                          </p>
-                                          {user.isSuspended && (
-                                            <Badge variant="destructive" className="text-xs shrink-0">
-                                              Suspended
-                                            </Badge>
-                                          )}
-                                        </div>
+                                        <p className="font-medium text-foreground truncate">
+                                          {user.firstName || user.lastName
+                                            ? `${user.firstName || ""} ${user.lastName || ""}`.trim()
+                                            : user.slugName}
+                                        </p>
                                         <p className="text-sm text-muted-foreground truncate">{user.email}</p>
                                         {user.kyId && (
                                           <p className="text-xs text-muted-foreground font-mono">{user.kyId}</p>
@@ -545,6 +572,12 @@ export default function UsersPage() {
                                   </TableCell>
                                   <TableCell>
                                     <div className="flex flex-col gap-1">
+                                      {user.isSuspended && (
+                                        <Badge variant="destructive" className="gap-1 text-xs w-fit">
+                                          <Ban className="w-3 h-3" />
+                                          Suspended
+                                        </Badge>
+                                      )}
                                       {user.isFromIITBhu && (
                                         <Badge variant="secondary" className="bg-blue-500/10 text-blue-600 dark:text-blue-400 border-0 gap-1 text-xs w-fit">
                                           <Building2 className="w-3 h-3" />
@@ -557,7 +590,7 @@ export default function UsersPage() {
                                           Paid
                                         </Badge>
                                       )}
-                                      {!user.isFromIITBhu && !user.isPaidUser && (
+                                      {!user.isFromIITBhu && !user.isPaidUser && !user.isSuspended && (
                                         <span className="text-xs text-muted-foreground">Free user</span>
                                       )}
                                     </div>
@@ -566,17 +599,33 @@ export default function UsersPage() {
                                     <p className="text-sm text-muted-foreground">{formatDate(user.createdAt)}</p>
                                   </TableCell>
                                   <TableCell className="text-right">
-                                    {canUpgrade && user.isFromIITBhu && !user.isSuspended && (
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => openUpgradeModal(user)}
-                                        className="gap-1.5 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-500/10 dark:text-blue-400 border-border/50"
-                                      >
-                                        <UserCog className="w-4 h-4" />
-                                        <span className="hidden sm:inline">Upgrade</span>
-                                      </Button>
-                                    )}
+                                    <div className="flex items-center justify-end gap-2">
+                                      {canUpgrade && user.isFromIITBhu && !user.isSuspended && (
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => openUpgradeModal(user)}
+                                          className="gap-1.5 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-500/10 dark:text-blue-400 border-border/50"
+                                        >
+                                          <UserCog className="w-4 h-4" />
+                                          <span className="hidden sm:inline">Upgrade</span>
+                                        </Button>
+                                      )}
+                                      {canUpgrade && !user.isSuspended && (
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => openSuspendModal(user)}
+                                          className="gap-1.5 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-500/10 dark:text-red-400 border-border/50"
+                                        >
+                                          <Ban className="w-4 h-4" />
+                                          <span className="hidden sm:inline">Suspend</span>
+                                        </Button>
+                                      )}
+                                      {user.isSuspended && (
+                                        <span className="text-xs text-muted-foreground italic">Suspended</span>
+                                      )}
+                                    </div>
                                   </TableCell>
                                 </TableRow>
                               ))}
@@ -632,7 +681,17 @@ export default function UsersPage() {
           onUpgrade={handleUpgrade}
           isPending={isUpgrading}
         />
-      </SidebarProvider>
+
+        {/* Suspend Modal */}
+        <SuspendAccountModal
+          isOpen={suspendModal.isOpen}
+          onClose={() => setSuspendModal({ isOpen: false, user: null })}
+          user={suspendModal.user}
+          onSuspend={handleSuspend}
+          isPending={isSuspending}
+        />
+        </SidebarProvider>
+      </ManagerGuard>
     </AuthGuard>
   );
 }

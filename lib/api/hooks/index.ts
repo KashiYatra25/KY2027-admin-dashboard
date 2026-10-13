@@ -9,7 +9,7 @@ export { useChangePassword } from "./useChangePassword";
 export { useAdminUsers, useInviteAdmin } from "./useAdminUsers";
 
 // All Users hooks (regular users, not admins)
-export { useAllUsers, useUpgradeToAdmin, type RegularUser, type PaginationInfo } from "./useAllUsers";
+export { useAllUsers, useUpgradeToAdmin, useSuspendAccount, type RegularUser, type PaginationInfo } from "./useAllUsers";
 
 // CA Application hooks
 export { useCAApplications, useApproveCA, useUpdateCAStatus } from "./useCAApplications";
@@ -36,3 +36,16 @@ export {
   type FestDay,
   type ScheduleEntry,
 } from "./useSchedule";
+
+// Team hooks
+export { useTeams, type Team, type TeamsResponse } from "./useTeams";
+
+// Registration hooks
+export {
+  useRegistrations,
+  type Registration,
+  type RegistrationsResponse,
+  type RegistrationStats,
+  type ParticipationType,
+  type RegistrationStatus,
+} from "./useRegistrations";

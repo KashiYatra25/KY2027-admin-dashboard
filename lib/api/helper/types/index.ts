@@ -15,3 +15,22 @@ export type {
   CAApplicationsResponse,
   ApproveCAResponse,
 } from "./ca.types";
+export type {
+  TeamMemberUser,
+  TeamMember,
+  Team,
+  TeamsResponse,
+} from "./team.types";
+export type {
+  ParticipationType,
+  RegistrationStatus,
+  EventCategory,
+  EventParticipationType,
+  RegistrationUser,
+  RegistrationTeamMember,
+  RegistrationTeam,
+  RegistrationEvent,
+  Registration,
+  RegistrationStats,
+  RegistrationsResponse,
+} from "./registration.types";

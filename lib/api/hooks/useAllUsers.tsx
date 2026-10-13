@@ -61,6 +61,11 @@ const UpgradeToAdminSchema = z.object({
   role: z.enum(["MANAGER", "OPERATOR"]),
 });
 
+const SuspendAccountSchema = z.object({
+  targetEmail: z.string().email(),
+  reason: z.string().min(10).optional(),
+});
+
 // ═══════════════════════════════════════════════════════════════════
 // HOOKS
 // ═══════════════════════════════════════════════════════════════════
@@ -187,6 +192,83 @@ export function useUpgradeToAdmin(options?: UseUpgradeToAdminOptions) {
 
   return {
     upgradeToAdmin,
+    isPending,
+    isSuccess,
+    isError,
+    error,
+    reset,
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// SUSPEND ACCOUNT HOOK
+// ═══════════════════════════════════════════════════════════════════
+
+interface SuspendAccountResponse {
+  info: string;
+  suspendedUserId: string;
+  role: string;
+  suspendedBy: string;
+  suspendedOn: string;
+}
+
+interface UseSuspendAccountOptions {
+  successToast?: React.ReactElement;
+  errorToast?: React.ReactElement;
+}
+
+/**
+ * Hook to suspend a user account.
+ * Hierarchy:
+ * - MASTER_ADMIN can suspend: MANAGER, OPERATOR, USER
+ * - MANAGER can suspend: OPERATOR, USER
+ */
+export function useSuspendAccount(options?: UseSuspendAccountOptions) {
+  const { mutate, isPending, isSuccess, isError, error, reset } =
+    useApiMutation<SuspendAccountResponse>({
+      url: "/admin/suspend-account",
+      method: "post",
+      baseURL: BACKEND_URL,
+      featureConfig: sharedFeatureConfig,
+      bodyValidator: { bodySchema: SuspendAccountSchema },
+      invalidateQueryName: ["all-users", "admin-users"],
+      toastConfig: {
+        successConfig: {
+          customToast: options?.successToast ?? (
+            <SuccessToast
+              title="Account suspended"
+              description="User has been notified via email"
+            />
+          ),
+        },
+        errorConfig: {
+          customToast: options?.errorToast ?? (
+            <ErrorToast
+              title="Suspension failed"
+              description="Please try again later"
+            />
+          ),
+        },
+      },
+      mutationOptions: {
+        retry: (failureCount, error: any) => {
+          const status = error?.response?.status ?? error?.status;
+          if (status === 401 || status === 403 || status === 429) return false;
+          return failureCount < 3;
+        },
+      },
+    });
+
+  const suspendAccount = useCallback(
+    (
+      data: { targetEmail: string; reason?: string },
+      mutationOptions?: Parameters<typeof mutate>[1]
+    ) => mutate(data, mutationOptions),
+    [mutate]
+  );
+
+  return {
+    suspendAccount,
     isPending,
     isSuccess,
     isError,
