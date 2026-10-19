@@ -1,5 +1,5 @@
 "use client";
-import { LayoutDashboard, Users, Users2, GraduationCap, Settings, LogOut, X, Zap, Calendar, Ticket, ClipboardList } from "lucide-react";
+import { LayoutDashboard, Users, Users2, GraduationCap, Settings, LogOut, X, Zap, Calendar, ClipboardList } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSidebar } from "@/hooks/useSidebar";
 import { useAdminSession, type RoleLevel } from "@/lib/auth";
@@ -36,8 +36,6 @@ const mainNavConfig: NavItem[] = [
   { icon: ClipboardList, label: "Registrations", href: "/registrations", allowedRoles: ["MASTER_ADMIN", "MANAGER"] },
   // Schedule: MASTER_ADMIN and MANAGER only
   { icon: Calendar, label: "Schedule", href: "/schedule", allowedRoles: ["MASTER_ADMIN", "MANAGER"] },
-  // Coupons: MASTER_ADMIN only
-  { icon: Ticket, label: "Coupons", href: "/coupons", allowedRoles: ["MASTER_ADMIN"] },
 ];
 
 // Admin navigation - filtered by role

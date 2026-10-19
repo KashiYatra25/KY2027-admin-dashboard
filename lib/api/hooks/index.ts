@@ -14,9 +14,6 @@ export { useAllUsers, useUpgradeToAdmin, useChangeAccountStatus, type RegularUse
 // CA Application hooks
 export { useCAApplications, useApproveCA, useUpdateCAStatus } from "./useCAApplications";
 
-// Coupon hooks
-export { useCoupons, useCreateCoupon, useUpdateCoupon, useChangeCouponStatus, useDeleteCoupon } from "./useCoupons";
-
 // Schedule hooks
 export {
   useVenues,

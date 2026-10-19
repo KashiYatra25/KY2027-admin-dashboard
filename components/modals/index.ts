@@ -8,8 +8,5 @@ export { DeleteScheduleEntryModal } from "./DeleteScheduleEntryModal";
 export { AddFestDayModal } from "./AddFestDayModal";
 export { EditFestDayModal } from "./EditFestDayModal";
 export { DeleteFestDayModal } from "./DeleteFestDayModal";
-export { CreateCouponModal } from "./CreateCouponModal";
-export { EditCouponModal } from "./EditCouponModal";
-export { DeleteCouponModal } from "./DeleteCouponModal";
 export { SuspendAccountModal } from "./SuspendAccountModal";
 export { ReactivateAccountModal } from "./ReactivateAccountModal";
