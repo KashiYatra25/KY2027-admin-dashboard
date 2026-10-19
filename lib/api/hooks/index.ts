@@ -46,3 +46,12 @@ export {
   type ParticipationType,
   type RegistrationStatus,
 } from "./useRegistrations";
+
+// Revenue analytics hooks
+export {
+  useRevenue,
+  type RevenueResponse,
+  type RevenueTotals,
+  type RevenueByDatePoint,
+  type RevenueByPassPoint,
+} from "./useRevenue";

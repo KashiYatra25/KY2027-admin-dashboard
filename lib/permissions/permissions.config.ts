@@ -16,6 +16,8 @@ export type Permission =
   | "manage_admin_users"
   | "view_ca_applications"
   | "manage_ca_applications"
+  | "view_partners"
+  | "manage_partners"
   | "view_settings"
   | "manage_settings";
 
@@ -39,6 +41,8 @@ export const ROLE_PERMISSIONS: Record<RoleLevel, Permission[]> = {
     "manage_admin_users",
     "view_ca_applications",
     "manage_ca_applications",
+    "view_partners",
+    "manage_partners",
     "view_settings",
     "manage_settings",
   ],
@@ -48,6 +52,8 @@ export const ROLE_PERMISSIONS: Record<RoleLevel, Permission[]> = {
     "view_admin_users",
     "view_ca_applications",
     "manage_ca_applications",
+    "view_partners",
+    "manage_partners",
     "view_settings",
   ],
   OPERATOR: [
@@ -66,6 +72,8 @@ export const PERMISSION_LABELS: Record<Permission, string> = {
   manage_admin_users: "Manage admin users",
   view_ca_applications: "View CA applications",
   manage_ca_applications: "Approve/reject CA applications",
+  view_partners: "View sponsors & partners",
+  manage_partners: "Create/edit/delete partners",
   view_settings: "View settings",
   manage_settings: "Modify settings",
 };
@@ -80,6 +88,8 @@ export const PERMISSION_MIN_ROLE: Record<Permission, RoleLevel> = {
   manage_admin_users: "MASTER_ADMIN",
   view_ca_applications: "MANAGER",
   manage_ca_applications: "MANAGER",
+  view_partners: "MANAGER",
+  manage_partners: "MANAGER",
   view_settings: "OPERATOR",
   manage_settings: "MASTER_ADMIN",
 };

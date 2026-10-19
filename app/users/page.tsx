@@ -634,7 +634,7 @@ export default function UsersPage() {
                                   </TableCell>
                                   <TableCell className="text-right">
                                     <div className="flex items-center justify-end gap-2">
-                                      {canUpgrade && user.isFromIITBhu && !user.isSuspended && (
+                                      {canUpgrade && !user.isSuspended && (
                                         <Button
                                           variant="outline"
                                           size="sm"

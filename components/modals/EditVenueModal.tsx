@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/select";
 import { Loader2, Pencil } from "lucide-react";
 import { useUpdateVenue, type Venue } from "@/lib/api/hooks";
+import { MapCoordinatePicker } from "./MapCoordinatePicker";
 import { cn } from "cn";
 
 // ═══════════════════════════════════════════════════════════════════
@@ -96,6 +97,15 @@ export function EditVenueModal({ open, onOpenChange, venue }: EditVenueModalProp
   const large = watch("large");
   const clickable = watch("clickable");
   const active = watch("active");
+  const xVal = watch("x");
+  const yVal = watch("y");
+  const anchorXVal = watch("anchorX");
+  const anchorYVal = watch("anchorY");
+  const labelVal = watch("label");
+
+  // Parse a form string field into a number or null for the picker.
+  const num = (v: string | undefined): number | null =>
+    v !== undefined && v !== "" && !isNaN(Number(v)) ? Number(v) : null;
 
   useEffect(() => {
     if (venue && open) {
@@ -166,7 +176,7 @@ export function EditVenueModal({ open, onOpenChange, venue }: EditVenueModalProp
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-base">
             <Pencil className="h-4 w-4 text-primary" />
@@ -215,7 +225,25 @@ export function EditVenueModal({ open, onOpenChange, venue }: EditVenueModalProp
             </Select>
           </div>
 
-          {/* Row 3: Position */}
+          {/* Map coordinate picker — click the map to auto-fill X/Y & anchor */}
+          <div className="space-y-2">
+            <Label className="text-xs font-medium">Position on Campus Map *</Label>
+            <MapCoordinatePicker
+              x={num(xVal)}
+              y={num(yVal)}
+              anchorX={num(anchorXVal)}
+              anchorY={num(anchorYVal)}
+              labelText={labelVal}
+              onChange={(c) => {
+                if (c.x !== undefined) setValue("x", String(c.x), { shouldValidate: true });
+                if (c.y !== undefined) setValue("y", String(c.y), { shouldValidate: true });
+                if (c.anchorX !== undefined) setValue("anchorX", String(c.anchorX));
+                if (c.anchorY !== undefined) setValue("anchorY", String(c.anchorY));
+              }}
+            />
+          </div>
+
+          {/* Row 3: Position (auto-filled by the picker; editable for fine-tuning) */}
           <div className="grid grid-cols-4 gap-4">
             <div className="space-y-2">
               <Label htmlFor="x" className="text-xs font-medium">X % *</Label>

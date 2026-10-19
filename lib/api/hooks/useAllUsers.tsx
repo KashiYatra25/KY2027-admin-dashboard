@@ -140,7 +140,6 @@ export function useAllUsers(options?: UseAllUsersOptions) {
 
 /**
  * Hook to upgrade a user to admin role.
- * Only works for users with isFromIITBhu: true.
  */
 interface UseUpgradeToAdminOptions {
   successToast?: React.ReactElement;
