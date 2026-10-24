@@ -5,7 +5,7 @@ import { SidebarProvider } from "@/hooks";
 import { AuthGuard, ManagerGuard } from "@/components/auth";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Topbar } from "@/components/layout/Topbar";
-import { useAdminUsers, useInviteAdmin } from "@/lib/api/hooks";
+import { useAdminUsers, useInviteAdmin, useInvalidateUserCache } from "@/lib/api/hooks";
 import { useAdminSession } from "@/lib/auth";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -37,6 +37,7 @@ import {
   XCircle,
   Download,
   Search,
+  Trash2,
 } from "lucide-react";
 import type { RoleLevel } from "@/lib/api/helper/types";
 
@@ -281,7 +282,9 @@ function InviteModal({ isOpen, onClose, onInvite, isPending, currentAdminRole }:
 export default function AdminUsersPage() {
   const { admins, isLoading, isError, refetch } = useAdminUsers();
   const { inviteAdmin, isPending: isInviting } = useInviteAdmin();
+  const { invalidateUserCache, isPending: isInvalidatingCache } = useInvalidateUserCache();
   const { session: currentAdmin } = useAdminSession();
+  const isMasterAdmin = currentAdmin?.role === "MASTER_ADMIN";
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [roleFilter, setRoleFilter] = useState<string[]>([]);
 
@@ -554,6 +557,9 @@ export default function AdminUsersPage() {
                                     onSort={handleSort}
                                   />
                                 </TableHead>
+                                {isMasterAdmin && (
+                                  <TableHead className="text-right min-w-[100px]">Actions</TableHead>
+                                )}
                               </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -601,6 +607,21 @@ export default function AdminUsersPage() {
                                     <TableCell className="hidden md:table-cell">
                                       <p className="text-sm text-muted-foreground">{formatDate(adminUser.createdAt)}</p>
                                     </TableCell>
+                                    {isMasterAdmin && (
+                                      <TableCell className="text-right">
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => invalidateUserCache(adminUser.id)}
+                                          disabled={isInvalidatingCache}
+                                          className="gap-1.5 text-orange-600 hover:text-orange-700 hover:bg-orange-50 dark:hover:bg-orange-500/10 dark:text-orange-400 border-border/50"
+                                          title="Clear cached data for this admin"
+                                        >
+                                          <Trash2 className="w-4 h-4" />
+                                          <span className="hidden sm:inline">Clear Cache</span>
+                                        </Button>
+                                      </TableCell>
+                                    )}
                                   </TableRow>
                                 );
                               })}

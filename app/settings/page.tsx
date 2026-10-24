@@ -7,7 +7,7 @@ import { AuthGuard } from "@/components/auth";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Topbar } from "@/components/layout/Topbar";
 import { useAdminSession } from "@/lib/auth";
-import { useChangePassword } from "@/lib/api/hooks";
+import { useChangePassword, useInvalidateCaches } from "@/lib/api/hooks";
 import { THEMES } from "@/components/layout/ThemeToggle";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -27,6 +27,8 @@ import {
   Loader2,
   CheckCircle2,
   KeyRound,
+  Database,
+  Trash2,
 } from "lucide-react";
 
 // ═══════════════════════════════════════════════════════════════════
@@ -126,6 +128,9 @@ export default function SettingsPage() {
   const { session } = useAdminSession();
   const { theme, setTheme } = useTheme();
   const { changePassword, isPending: isChangingPassword, isSuccess: isPasswordChanged, reset: resetPasswordState } = useChangePassword();
+  const { invalidateCaches, isPending: isInvalidatingCaches } = useInvalidateCaches();
+
+  const isMasterAdmin = session?.role === "MASTER_ADMIN";
 
   const [mounted, setMounted] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
@@ -393,6 +398,54 @@ export default function SettingsPage() {
                       </form>
                     </CardContent>
                   </Card>
+
+                  {/* ═══════════════════════════════════════════════════════════ */}
+                  {/* CACHE MANAGEMENT SECTION (MASTER_ADMIN ONLY) */}
+                  {/* ═══════════════════════════════════════════════════════════ */}
+                  {isMasterAdmin && (
+                    <Card className="border-destructive/30 bg-destructive/5">
+                      <CardHeader className="pb-4">
+                        <div className="flex items-center gap-2">
+                          <Database className="w-4 h-4 text-destructive" />
+                          <CardTitle className="text-base text-destructive">Cache Management</CardTitle>
+                        </div>
+                        <CardDescription className="text-xs">
+                          Dangerous operations — only available to Super Admins
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div className="p-3 rounded-lg bg-muted/30 space-y-2">
+                          <p className="text-sm font-medium">Invalidate All Caches</p>
+                          <p className="text-xs text-muted-foreground">
+                            Clears all application caches including schedule, events, passes, and user data caches.
+                            Use this after seeding data or if you notice stale data issues.
+                          </p>
+                          <p className="text-xs text-amber-600 dark:text-amber-400">
+                            ⚠️ This will not affect rate limits, OTP state, or admin sessions.
+                          </p>
+                        </div>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => invalidateCaches()}
+                          disabled={isInvalidatingCaches}
+                          className="gap-2"
+                        >
+                          {isInvalidatingCaches ? (
+                            <>
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              Invalidating...
+                            </>
+                          ) : (
+                            <>
+                              <Trash2 className="h-3.5 w-3.5" />
+                              Invalidate All Caches
+                            </>
+                          )}
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  )}
                 </div>
               </div>
             </main>

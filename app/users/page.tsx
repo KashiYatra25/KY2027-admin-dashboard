@@ -5,7 +5,7 @@ import { SidebarProvider } from "@/hooks";
 import { AuthGuard, RoleGuard } from "@/components/auth";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Topbar } from "@/components/layout/Topbar";
-import { useAllUsers, useUpgradeToAdmin, useChangeAccountStatus, type RegularUser } from "@/lib/api/hooks";
+import { useAllUsers, useUpgradeToAdmin, useChangeAccountStatus, useInvalidateUserCache, type RegularUser } from "@/lib/api/hooks";
 import { useAdminSession } from "@/lib/auth";
 import { SuspendAccountModal, ReactivateAccountModal } from "@/components/modals";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -41,6 +41,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Ban,
+  Trash2,
 } from "lucide-react";
 
 // ═══════════════════════════════════════════════════════════════════
@@ -280,6 +281,10 @@ export default function UsersPage() {
 
   const { upgradeToAdmin, isPending: isUpgrading } = useUpgradeToAdmin();
   const { suspendAccount, reactivateAccount, isPending: isChangingStatus } = useChangeAccountStatus();
+  const { invalidateUserCache, isPending: isInvalidatingCache } = useInvalidateUserCache();
+  
+  // Only MASTER_ADMIN can clear user cache
+  const isMasterAdmin = currentAdmin?.role === "MASTER_ADMIN";
   
   const [upgradeModal, setUpgradeModal] = useState<{
     isOpen: boolean;
@@ -665,6 +670,19 @@ export default function UsersPage() {
                                         >
                                           <RefreshCw className="w-4 h-4" />
                                           <span className="hidden sm:inline">Reactivate</span>
+                                        </Button>
+                                      )}
+                                      {isMasterAdmin && (
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => invalidateUserCache(user.id)}
+                                          disabled={isInvalidatingCache}
+                                          className="gap-1.5 text-orange-600 hover:text-orange-700 hover:bg-orange-50 dark:hover:bg-orange-500/10 dark:text-orange-400 border-border/50"
+                                          title="Clear cached data for this user"
+                                        >
+                                          <Trash2 className="w-4 h-4" />
+                                          <span className="hidden sm:inline">Clear Cache</span>
                                         </Button>
                                       )}
                                     </div>

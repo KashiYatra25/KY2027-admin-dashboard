@@ -55,3 +55,7 @@ export {
   type RevenueByDatePoint,
   type RevenueByPassPoint,
 } from "./useRevenue";
+
+// Cache management hooks (MASTER_ADMIN only)
+export { useInvalidateCaches } from "./useInvalidateCaches";
+export { useInvalidateUserCache } from "./useInvalidateUserCache";
