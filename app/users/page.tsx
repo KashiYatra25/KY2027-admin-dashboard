@@ -5,7 +5,7 @@ import { SidebarProvider } from "@/hooks";
 import { AuthGuard, RoleGuard } from "@/components/auth";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Topbar } from "@/components/layout/Topbar";
-import { useAllUsers, useUpgradeToAdmin, useChangeAccountStatus, useInvalidateUserCache, type RegularUser } from "@/lib/api/hooks";
+import { useAllUsers, useUpgradeToAdmin, useChangeAccountStatus, useInvalidateUserCache, useToggleUserPaidStatus, type RegularUser } from "@/lib/api/hooks";
 import { useAdminSession } from "@/lib/auth";
 import { SuspendAccountModal, ReactivateAccountModal } from "@/components/modals";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -42,6 +42,7 @@ import {
   ChevronRight,
   Ban,
   Trash2,
+  DollarSign,
 } from "lucide-react";
 
 // ═══════════════════════════════════════════════════════════════════
@@ -282,8 +283,9 @@ export default function UsersPage() {
   const { upgradeToAdmin, isPending: isUpgrading } = useUpgradeToAdmin();
   const { suspendAccount, reactivateAccount, isPending: isChangingStatus } = useChangeAccountStatus();
   const { invalidateUserCache, isPending: isInvalidatingCache } = useInvalidateUserCache();
+  const { toggleUserPaidStatus, isPending: isTogglingPaidStatus } = useToggleUserPaidStatus();
   
-  // Only MASTER_ADMIN can clear user cache
+  // Only MASTER_ADMIN can clear user cache and toggle paid status
   const isMasterAdmin = currentAdmin?.role === "MASTER_ADMIN";
   
   const [upgradeModal, setUpgradeModal] = useState<{
@@ -683,6 +685,25 @@ export default function UsersPage() {
                                         >
                                           <Trash2 className="w-4 h-4" />
                                           <span className="hidden sm:inline">Clear Cache</span>
+                                        </Button>
+                                      )}
+                                      {isMasterAdmin && (
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => toggleUserPaidStatus(user.id, {
+                                            onSuccess: () => refetch(),
+                                          })}
+                                          disabled={isTogglingPaidStatus}
+                                          className={`gap-1.5 border-border/50 ${
+                                            user.isPaidUser
+                                              ? "text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-500/10 dark:text-green-400"
+                                              : "text-gray-600 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-500/10 dark:text-gray-400"
+                                          }`}
+                                          title={user.isPaidUser ? "Mark as unpaid" : "Mark as paid"}
+                                        >
+                                          <DollarSign className="w-4 h-4" />
+                                          <span className="hidden sm:inline">{user.isPaidUser ? "Paid ✓" : "Mark Paid"}</span>
                                         </Button>
                                       )}
                                     </div>
