@@ -10,3 +10,5 @@ export { EditFestDayModal } from "./EditFestDayModal";
 export { DeleteFestDayModal } from "./DeleteFestDayModal";
 export { SuspendAccountModal } from "./SuspendAccountModal";
 export { ReactivateAccountModal } from "./ReactivateAccountModal";
+
+export { TogglePaidStatusModal } from "./TogglePaidStatusModal";

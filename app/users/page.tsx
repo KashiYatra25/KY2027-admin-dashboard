@@ -7,7 +7,7 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { Topbar } from "@/components/layout/Topbar";
 import { useAllUsers, useUpgradeToAdmin, useChangeAccountStatus, useInvalidateUserCache, useToggleUserPaidStatus, type RegularUser } from "@/lib/api/hooks";
 import { useAdminSession } from "@/lib/auth";
-import { SuspendAccountModal, ReactivateAccountModal } from "@/components/modals";
+import { SuspendAccountModal, ReactivateAccountModal, TogglePaidStatusModal } from "@/components/modals";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -299,6 +299,11 @@ export default function UsersPage() {
   }>({ isOpen: false, user: null });
 
   const [reactivateModal, setReactivateModal] = useState<{
+    isOpen: boolean;
+    user: RegularUser | null;
+  }>({ isOpen: false, user: null });
+
+  const [togglePaidModal, setTogglePaidModal] = useState<{
     isOpen: boolean;
     user: RegularUser | null;
   }>({ isOpen: false, user: null });
@@ -691,9 +696,7 @@ export default function UsersPage() {
                                         <Button
                                           variant="outline"
                                           size="sm"
-                                          onClick={() => toggleUserPaidStatus(user.id, {
-                                            onSuccess: () => refetch(),
-                                          })}
+                                          onClick={() => setTogglePaidModal({ isOpen: true, user })}
                                           disabled={isTogglingPaidStatus}
                                           className={`gap-1.5 border-border/50 ${
                                             user.isPaidUser
@@ -780,6 +783,24 @@ export default function UsersPage() {
           user={reactivateModal.user}
           onReactivate={handleReactivate}
           isPending={isChangingStatus}
+        />
+
+        {/* Toggle Paid Status Modal */}
+        <TogglePaidStatusModal
+          isOpen={togglePaidModal.isOpen}
+          onClose={() => setTogglePaidModal({ isOpen: false, user: null })}
+          user={togglePaidModal.user}
+          onConfirm={() => {
+            if (togglePaidModal.user) {
+              toggleUserPaidStatus(togglePaidModal.user.id, {
+                onSuccess: () => {
+                  refetch();
+                  setTogglePaidModal({ isOpen: false, user: null });
+                },
+              });
+            }
+          }}
+          isPending={isTogglingPaidStatus}
         />
         </SidebarProvider>
       </RoleGuard>
