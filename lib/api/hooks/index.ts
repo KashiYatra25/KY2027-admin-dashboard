@@ -59,3 +59,4 @@ export {
 // Cache management hooks (MASTER_ADMIN only)
 export { useInvalidateCaches } from "./useInvalidateCaches";
 export { useInvalidateUserCache } from "./useInvalidateUserCache";
+export { useToggleUserPaidStatus } from "./useToggleUserPaidStatus";
