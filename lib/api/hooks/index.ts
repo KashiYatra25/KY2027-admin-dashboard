@@ -78,6 +78,7 @@ export { useToggleUserPaidStatus } from "./useToggleUserPaidStatus";
 export {
   useBulkUserLookup,
   useManualPaymentRequests,
+  useMyPaymentRequests,
   useCreateManualPaymentRequest,
   useApproveManualPayment,
   useRejectManualPayment,

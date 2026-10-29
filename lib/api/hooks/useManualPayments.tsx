@@ -174,7 +174,7 @@ export function useBulkUserLookup(kyIds: string[]) {
 }
 
 /**
- * Hook to fetch manual payment requests
+ * Hook to fetch all manual payment requests (MASTER_ADMIN only)
  */
 interface UseManualPaymentRequestsParams {
   status?: RequestStatus;
@@ -195,6 +195,49 @@ export function useManualPaymentRequests(params?: UseManualPaymentRequestsParams
     useApiQuery<ManualPaymentRequestsResponse>({
       queryKey: ["manual-payment-requests", `status:${status ?? "all"}`, `page:${page}`, `limit:${limit}`],
       url: `/admin/manual-payment/requests?${queryParams.toString()}`,
+      baseURL: BACKEND_URL,
+      featureConfig: sharedFeatureConfig,
+      queryOptions: {
+        staleTime: 1000 * 30, // 30 seconds - refresh frequently
+        gcTime: 1000 * 60 * 5, // 5 minutes cache
+        retry: (failureCount, error: any) => {
+          const statusCode = error?.response?.status ?? error?.status;
+          // Don't retry on any 4xx or 5xx errors
+          if (statusCode >= 400) return false;
+          return failureCount < 2;
+        },
+        retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000), // Exponential backoff: 1s, 2s, 4s... max 10s
+      },
+    });
+
+  const refetchRequests = useCallback(() => refetch(), [refetch]);
+
+  return {
+    requests: data?.requests ?? [],
+    pagination: data?.pagination ?? { page: 1, limit: 20, totalCount: 0, totalPages: 0, hasMore: false },
+    isLoading,
+    isError,
+    error,
+    refetch: refetchRequests,
+  };
+}
+
+/**
+ * Hook to fetch current admin's own manual payment requests
+ */
+export function useMyPaymentRequests(params?: UseManualPaymentRequestsParams) {
+  const { status, page = 1, limit = 20 } = params ?? {};
+  
+  // Build query string
+  const queryParams = new URLSearchParams();
+  if (status) queryParams.set("status", status);
+  queryParams.set("page", String(page));
+  queryParams.set("limit", String(limit));
+
+  const { data, isLoading, isError, error, refetch } =
+    useApiQuery<ManualPaymentRequestsResponse>({
+      queryKey: ["my-payment-requests", `status:${status ?? "all"}`, `page:${page}`, `limit:${limit}`],
+      url: `/admin/manual-payment/my-requests?${queryParams.toString()}`,
       baseURL: BACKEND_URL,
       featureConfig: sharedFeatureConfig,
       queryOptions: {
