@@ -26,3 +26,15 @@ export type {
   RegistrationStats,
   RegistrationsResponse,
 } from "./registration.types";
+export type {
+  ZonalPassType,
+  ZonalPaymentStatus,
+  ZonalPaymentSource,
+  ZonalPass,
+  ZonalUser,
+  ZonalRegistration,
+  ZonalStats,
+  CollegeBreakdown,
+  ZonalPaginationInfo,
+  ZonalRegistrationsResponse,
+} from "./zonal.types";

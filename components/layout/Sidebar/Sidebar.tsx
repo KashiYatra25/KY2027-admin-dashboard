@@ -1,5 +1,5 @@
 "use client";
-import { LayoutDashboard, Users, Users2, GraduationCap, Settings, LogOut, X, Zap, Calendar, ClipboardList, Wallet, Receipt } from "lucide-react";
+import { LayoutDashboard, Users, Users2, GraduationCap, Settings, LogOut, X, Zap, Calendar, ClipboardList, Wallet, Receipt, MapPin } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSidebar } from "@/hooks/useSidebar";
 import { useAdminSession, type RoleLevel } from "@/lib/auth";
@@ -34,6 +34,8 @@ const mainNavConfig: NavItem[] = [
   { icon: Users, label: "Teams", href: "/teams", allowedRoles: ["MASTER_ADMIN", "MANAGER"] },
   // Registrations: MASTER_ADMIN and MANAGER only
   { icon: ClipboardList, label: "Registrations", href: "/registrations", allowedRoles: ["MASTER_ADMIN", "MANAGER"] },
+  // Zonal Registrations: MASTER_ADMIN and MANAGER only
+  { icon: MapPin, label: "Zonals", href: "/zonals", allowedRoles: ["MASTER_ADMIN", "MANAGER"] },
   // Payments & Revenue: MASTER_ADMIN and MANAGER only
   { icon: Wallet, label: "Payments", href: "/payments", allowedRoles: ["MASTER_ADMIN", "MANAGER"] },
   // Manual Payments: All roles can access (OPERATOR can only see own requests)

@@ -49,6 +49,17 @@ export {
   type RegistrationStatus,
 } from "./useRegistrations";
 
+// Zonal Registration hooks
+export {
+  useZonalRegistrations,
+  type ZonalRegistration,
+  type ZonalRegistrationsResponse,
+  type ZonalStats,
+  type ZonalPassType,
+  type ZonalPaymentStatus,
+  type CollegeBreakdown,
+} from "./useZonalRegistrations";
+
 // Revenue analytics hooks
 export {
   useRevenue,
