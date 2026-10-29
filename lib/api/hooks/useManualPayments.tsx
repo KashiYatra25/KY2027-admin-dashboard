@@ -432,6 +432,93 @@ export function useRejectManualPayment(options?: UseRejectManualPaymentOptions) 
 }
 
 // ═══════════════════════════════════════════════════════════════════
+// PRESIGNED URL HOOK
+// ═══════════════════════════════════════════════════════════════════
+
+interface PresignedUpload {
+  filename: string;
+  uploadUrl: string;
+  key: string;
+  expiresAt: string;
+}
+
+interface GetPresignedUrlsResponse {
+  info: string;
+  uploads: PresignedUpload[];
+}
+
+/**
+ * Get presigned URLs for uploading files to R2
+ */
+export async function getPresignedUploadUrls(
+  files: Array<{ filename: string; contentType: string }>,
+): Promise<PresignedUpload[]> {
+  const accessToken = typeof window !== "undefined" 
+    ? localStorage.getItem("admin_access_token") 
+    : null;
+  
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  
+  if (accessToken) {
+    headers["Authorization"] = `Bearer ${accessToken}`;
+  }
+  
+  const response = await fetch(`${BACKEND_URL}/admin/uploads/presign`, {
+    method: "POST",
+    headers,
+    credentials: "include",
+    body: JSON.stringify({ files }),
+  });
+  
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.info || errorData.message || "Failed to get presigned URLs");
+  }
+  
+  const data: GetPresignedUrlsResponse = await response.json();
+  return data.uploads;
+}
+
+/**
+ * Upload a file to R2 using a presigned URL
+ */
+export async function uploadFileToR2(file: File, uploadUrl: string): Promise<void> {
+  const response = await fetch(uploadUrl, {
+    method: "PUT",
+    body: file,
+    headers: {
+      "Content-Type": file.type,
+    },
+  });
+  
+  if (!response.ok) {
+    throw new Error(`Failed to upload ${file.name}: ${response.statusText}`);
+  }
+}
+
+/**
+ * Upload multiple files to R2 and return their keys
+ */
+export async function uploadFilesToR2(files: File[]): Promise<string[]> {
+  if (files.length === 0) return [];
+  
+  // Get presigned URLs for all files
+  const presignedUrls = await getPresignedUploadUrls(
+    files.map((f) => ({ filename: f.name, contentType: f.type })),
+  );
+  
+  // Upload each file
+  const uploadPromises = files.map((file, index) => {
+    const presigned = presignedUrls[index];
+    return uploadFileToR2(file, presigned.uploadUrl).then(() => presigned.key);
+  });
+  
+  return Promise.all(uploadPromises);
+}
+
+// ═══════════════════════════════════════════════════════════════════
 // CONSTANTS
 // ═══════════════════════════════════════════════════════════════════
 

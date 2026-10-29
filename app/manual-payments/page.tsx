@@ -11,6 +11,7 @@ import {
   useRejectManualPayment,
   useBulkUserLookup,
   useCreateManualPaymentRequest,
+  uploadFilesToR2,
   MANUAL_PASS_TYPES,
   PAYMENT_METHODS,
   REQUEST_STATUS_COLORS,
@@ -513,41 +514,57 @@ function CreateRequestModal({ open, onClose, onSuccess }: CreateRequestModalProp
     (!isZonalPass || collegeSlug) &&
     bonafideFiles.length > 0;
 
+  // Form state for upload progress
+  const [isUploading, setIsUploading] = useState(false);
+
   // Handle submit
-  const handleSubmit = () => {
-    if (!isValid) return;
+  const handleSubmit = async () => {
+    if (!isValid || isUploading) return;
 
-    // Log bonafide files for now (TODO: Upload to R2 and get URLs)
-    if (bonafideFiles.length > 0) {
-      console.log("📎 Bonafide files to upload:", bonafideFiles.length);
-      bonafideFiles.forEach((file, i) => {
-        console.log(`  [${i + 1}] ${file.name} (${(file.size / 1024).toFixed(1)} KB, ${file.type})`);
-      });
-    } else {
-      console.log("📎 No bonafide files attached");
-    }
+    try {
+      setIsUploading(true);
+      setUploadError(null);
 
-    createRequest(
-      {
-        users: selectedUsers.map((u) => ({
-          userId: u.userId,
-          kyId: u.kyId,
-          email: u.email,
-        })),
-        passType: passType as any,
-        paymentMethod: paymentMethod as any,
-        amount: parseFloat(amount),
-        collegeSlug: isZonalPass ? collegeSlug : undefined,
-        bonafides: bonafideFiles.map((f) => f.name),
-      },
-      {
-        onSuccess: () => {
-          console.log("✅ Manual payment request created successfully");
-          handleClose();
-          onSuccess();
-        },
+      // Upload files to R2 first
+      let bonafideKeys: string[] = [];
+      if (bonafideFiles.length > 0) {
+        console.log("📤 Uploading bonafide files to R2...", bonafideFiles.length);
+        bonafideKeys = await uploadFilesToR2(bonafideFiles);
+        console.log("✅ Files uploaded successfully:", bonafideKeys);
       }
-    );
+
+      // Create the request with R2 keys
+      createRequest(
+        {
+          users: selectedUsers.map((u) => ({
+            userId: u.userId,
+            kyId: u.kyId,
+            email: u.email,
+          })),
+          passType: passType as any,
+          paymentMethod: paymentMethod as any,
+          amount: parseFloat(amount),
+          collegeSlug: isZonalPass ? collegeSlug : undefined,
+          bonafides: bonafideKeys,
+        },
+        {
+          onSuccess: () => {
+            console.log("✅ Manual payment request created successfully");
+            handleClose();
+            onSuccess();
+          },
+          onError: (error) => {
+            console.error("❌ Failed to create request:", error);
+            setUploadError("Failed to create request. Please try again.");
+          },
+        }
+      );
+    } catch (error) {
+      console.error("❌ Upload error:", error);
+      setUploadError(error instanceof Error ? error.message : "Failed to upload files");
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   // Step completion status
