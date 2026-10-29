@@ -558,7 +558,7 @@ function CreateRequestModal({ open, onClose, onSuccess }: CreateRequestModalProp
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-background p-0">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-background p-0">
         {/* Header */}
         <div className="sticky top-0 z-10 bg-background border-b px-6 py-4">
           <DialogHeader>
@@ -713,7 +713,7 @@ function CreateRequestModal({ open, onClose, onSuccess }: CreateRequestModalProp
             </div>
             
             <div className="ml-11 space-y-4">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-3 gap-3">
                 {Object.entries(MANUAL_PASS_TYPES).map(([key, config]) => (
                   <button
                     key={key}
