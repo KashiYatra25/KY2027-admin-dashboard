@@ -7,6 +7,7 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { Topbar } from "@/components/layout/Topbar";
 import {
   useManualPaymentRequests,
+  useMyPaymentRequests,
   useApproveManualPayment,
   useRejectManualPayment,
   useBulkUserLookup,
@@ -40,6 +41,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Tabs,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
@@ -1187,17 +1193,47 @@ function ManualPaymentsPageInner() {
   const { session } = useAdminSession();
   const canProcess = hasPermission(session?.role, "process_manual_payments");
   const canCreate = hasPermission(session?.role, "create_manual_payments");
+  const isMasterAdmin = session?.role === "MASTER_ADMIN";
+
+  // View mode: "all" for MASTER_ADMIN, "my" for everyone else
+  const [viewMode, setViewMode] = useState<"all" | "my">(isMasterAdmin ? "all" : "my");
 
   // Filters
   const [statusFilter, setStatusFilter] = useState<RequestStatus | "ALL">("ALL");
   const [page, setPage] = useState(1);
 
-  // Fetch requests
-  const { requests, pagination, isLoading, isError, refetch } = useManualPaymentRequests({
+  // Fetch ALL requests (MASTER_ADMIN only)
+  const {
+    requests: allRequests,
+    pagination: allPagination,
+    isLoading: isLoadingAll,
+    isError: isErrorAll,
+    refetch: refetchAll,
+  } = useManualPaymentRequests({
     status: statusFilter === "ALL" ? undefined : statusFilter,
     page,
     limit: 20,
   });
+
+  // Fetch MY requests (all roles)
+  const {
+    requests: myRequests,
+    pagination: myPagination,
+    isLoading: isLoadingMy,
+    isError: isErrorMy,
+    refetch: refetchMy,
+  } = useMyPaymentRequests({
+    status: statusFilter === "ALL" ? undefined : statusFilter,
+    page,
+    limit: 20,
+  });
+
+  // Select the right data based on view mode
+  const requests = viewMode === "all" ? allRequests : myRequests;
+  const pagination = viewMode === "all" ? allPagination : myPagination;
+  const isLoading = viewMode === "all" ? isLoadingAll : isLoadingMy;
+  const isError = viewMode === "all" ? isErrorAll : isErrorMy;
+  const refetch = viewMode === "all" ? refetchAll : refetchMy;
 
   // Modals
   const [selectedRequest, setSelectedRequest] = useState<ManualPaymentRequest | null>(null);
@@ -1332,29 +1368,45 @@ function ManualPaymentsPageInner() {
             </Card>
           </div>
 
-          {/* Filters */}
+          {/* View Tabs & Filters */}
           <Card className="mb-6">
             <CardHeader className="pb-3">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <CardTitle className="text-lg">Payment Requests</CardTitle>
-                <div className="flex items-center gap-2">
-                  <Select
-                    value={statusFilter}
-                    onValueChange={(v) => {
-                      setStatusFilter(v as RequestStatus | "ALL");
-                      setPage(1);
-                    }}
-                  >
-                    <SelectTrigger className="w-[150px]">
-                      <SelectValue placeholder="Filter status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="ALL">All Status</SelectItem>
-                      <SelectItem value="PENDING">Pending</SelectItem>
-                      <SelectItem value="APPROVED">Approved</SelectItem>
-                      <SelectItem value="REJECTED">Rejected</SelectItem>
-                    </SelectContent>
-                  </Select>
+              <div className="flex flex-col gap-4">
+                {/* Tabs for switching between All / My Requests */}
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <div className="flex items-center gap-4">
+                    <CardTitle className="text-lg">Payment Requests</CardTitle>
+                    {isMasterAdmin && (
+                      <Tabs value={viewMode} onValueChange={(v) => { setViewMode(v as "all" | "my"); setPage(1); }}>
+                        <TabsList className="h-8">
+                          <TabsTrigger value="all" className="text-xs px-3">All Requests</TabsTrigger>
+                          <TabsTrigger value="my" className="text-xs px-3">My Requests</TabsTrigger>
+                        </TabsList>
+                      </Tabs>
+                    )}
+                    {!isMasterAdmin && (
+                      <Badge variant="secondary" className="text-xs">My Requests Only</Badge>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Select
+                      value={statusFilter}
+                      onValueChange={(v) => {
+                        setStatusFilter(v as RequestStatus | "ALL");
+                        setPage(1);
+                      }}
+                    >
+                      <SelectTrigger className="w-[150px]">
+                        <SelectValue placeholder="Filter status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="ALL">All Status</SelectItem>
+                        <SelectItem value="PENDING">Pending</SelectItem>
+                        <SelectItem value="APPROVED">Approved</SelectItem>
+                        <SelectItem value="REJECTED">Rejected</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               </div>
             </CardHeader>
