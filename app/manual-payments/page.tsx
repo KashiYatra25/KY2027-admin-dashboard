@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { SidebarProvider } from "@/hooks";
 import { AuthGuard } from "@/components/auth";
 import { Sidebar } from "@/components/layout/Sidebar";
@@ -18,6 +18,7 @@ import {
   type RequestStatus,
   type ManualPaymentRequest,
 } from "@/lib/api/hooks";
+import { BACKEND_URL } from "@/lib/api/constants";
 import { useAdminSession } from "@/lib/auth";
 import { hasPermission } from "@/lib/permissions";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -107,6 +108,15 @@ function StatusBadge({ status }: { status: RequestStatus }) {
 // REQUEST DETAILS MODAL
 // ═══════════════════════════════════════════════════════════════════
 
+interface BonafideUrl {
+  index: number;
+  key: string;
+  url: string;
+  expiresAt: string;
+  isImage: boolean;
+  extension: string;
+}
+
 interface RequestDetailsModalProps {
   request: ManualPaymentRequest | null;
   open: boolean;
@@ -114,6 +124,49 @@ interface RequestDetailsModalProps {
 }
 
 function RequestDetailsModal({ request, open, onClose }: RequestDetailsModalProps) {
+  const [bonafideUrls, setBonafideUrls] = useState<BonafideUrl[]>([]);
+  const [loadingBonafides, setLoadingBonafides] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+
+  // Fetch bonafide URLs when modal opens
+  useEffect(() => {
+    if (open && request && request.bonafides.length > 0) {
+      setLoadingBonafides(true);
+      setBonafideUrls([]);
+      
+      const fetchBonafides = async () => {
+        try {
+          const accessToken = typeof window !== "undefined" 
+            ? localStorage.getItem("admin_access_token") 
+            : null;
+          
+          const headers: Record<string, string> = {};
+          if (accessToken) {
+            headers["Authorization"] = `Bearer ${accessToken}`;
+          }
+          
+          const response = await fetch(
+            `${BACKEND_URL}/admin/manual-payment/requests/${request.requestId}/bonafides`,
+            { headers, credentials: "include" }
+          );
+          
+          if (response.ok) {
+            const data = await response.json();
+            setBonafideUrls(data.bonafides || []);
+          }
+        } catch (error) {
+          console.error("Failed to fetch bonafide URLs:", error);
+        } finally {
+          setLoadingBonafides(false);
+        }
+      };
+      
+      fetchBonafides();
+    } else {
+      setBonafideUrls([]);
+    }
+  }, [open, request]);
+
   if (!request) return null;
 
   const passConfig = MANUAL_PASS_TYPES[request.passType];
@@ -190,17 +243,85 @@ function RequestDetailsModal({ request, open, onClose }: RequestDetailsModalProp
           {request.bonafides.length > 0 && (
             <div>
               <Label className="text-muted-foreground">
-                Bonafides ({request.bonafides.length})
+                Payment Proofs ({request.bonafides.length})
               </Label>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {request.bonafides.map((key, i) => (
-                  <Badge key={i} variant="outline" className="flex items-center gap-1">
-                    <FileText className="h-3 w-3" />
-                    Document {i + 1}
-                  </Badge>
-                ))}
-              </div>
+              {loadingBonafides ? (
+                <div className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                  Loading documents...
+                </div>
+              ) : bonafideUrls.length > 0 ? (
+                <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {bonafideUrls.map((bonafide) => (
+                    <div
+                      key={bonafide.index}
+                      className="relative group rounded-lg border overflow-hidden bg-muted/30"
+                    >
+                      {bonafide.isImage ? (
+                        <button
+                          type="button"
+                          onClick={() => setSelectedImage(bonafide.url)}
+                          className="w-full aspect-square relative cursor-pointer hover:opacity-90 transition-opacity"
+                        >
+                          <img
+                            src={bonafide.url}
+                            alt={`Document ${bonafide.index + 1}`}
+                            className="w-full h-full object-cover"
+                          />
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                            <Eye className="h-6 w-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                          </div>
+                        </button>
+                      ) : (
+                        <a
+                          href={bonafide.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex flex-col items-center justify-center aspect-square p-4 hover:bg-muted/50 transition-colors"
+                        >
+                          <FileText className="h-10 w-10 text-muted-foreground mb-2" />
+                          <span className="text-xs text-muted-foreground uppercase font-medium">
+                            {bonafide.extension}
+                          </span>
+                          <span className="text-xs text-primary mt-1">Click to view</span>
+                        </a>
+                      )}
+                      <div className="p-2 border-t bg-background/80 text-center">
+                        <p className="text-xs font-medium">Document {bonafide.index + 1}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {request.bonafides.map((key, i) => (
+                    <Badge key={i} variant="outline" className="flex items-center gap-1">
+                      <FileText className="h-3 w-3" />
+                      Document {i + 1}
+                    </Badge>
+                  ))}
+                </div>
+              )}
             </div>
+          )}
+
+          {/* Image Lightbox */}
+          {selectedImage && (
+            <Dialog open={!!selectedImage} onOpenChange={() => setSelectedImage(null)}>
+              <DialogContent className="max-w-4xl p-2 bg-black/90">
+                <button
+                  onClick={() => setSelectedImage(null)}
+                  className="absolute top-2 right-2 z-10 p-2 rounded-full bg-black/50 hover:bg-black/70 text-white"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+                <img
+                  src={selectedImage}
+                  alt="Document preview"
+                  className="w-full h-auto max-h-[80vh] object-contain rounded"
+                />
+              </DialogContent>
+            </Dialog>
           )}
 
           {/* Processing Info */}
