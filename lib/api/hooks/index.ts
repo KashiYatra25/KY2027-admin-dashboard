@@ -8,6 +8,7 @@ export { useChangePassword } from "./useChangePassword";
 // Admin Users hooks
 export { useAdminUsers, useInviteAdmin } from "./useAdminUsers";
 export { useChangeAdminRole, type ChangeAdminRoleResponse } from "./useChangeAdminRole";
+export { useDemoteAdminToUser, type DemoteAdminToUserResponse } from "./useDemoteAdminToUser";
 
 // All Users hooks (regular users, not admins)
 export { useAllUsers, useUpgradeToAdmin, useChangeAccountStatus, type RegularUser, type PaginationInfo } from "./useAllUsers";

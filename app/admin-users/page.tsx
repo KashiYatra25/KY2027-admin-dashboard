@@ -5,7 +5,7 @@ import { SidebarProvider } from "@/hooks";
 import { AuthGuard, ManagerGuard } from "@/components/auth";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Topbar } from "@/components/layout/Topbar";
-import { useAdminUsers, useInviteAdmin, useInvalidateUserCache, useChangeAdminRole } from "@/lib/api/hooks";
+import { useAdminUsers, useInviteAdmin, useInvalidateUserCache, useChangeAdminRole, useDemoteAdminToUser } from "@/lib/api/hooks";
 import { useAdminSession } from "@/lib/auth";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -39,6 +39,9 @@ import {
   Search,
   Trash2,
   ArrowUpDown,
+  UserMinus,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
 import type { RoleLevel } from "@/lib/api/helper/types";
 
@@ -277,132 +280,295 @@ function InviteModal({ isOpen, onClose, onInvite, isPending, currentAdminRole }:
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// CHANGE ROLE MODAL
+// MANAGE ROLE MODAL
 // ═══════════════════════════════════════════════════════════════════
 
-interface ChangeRoleModalProps {
+type RoleAction = "PROMOTE_TO_MANAGER" | "DEMOTE_TO_OPERATOR" | "DEMOTE_TO_USER";
+
+interface ManageRoleModalProps {
   isOpen: boolean;
   onClose: () => void;
   admin: AdminUser | null;
   onChangeRole: (newRole: "MANAGER" | "OPERATOR") => void;
-  isPending: boolean;
+  onDemoteToUser: () => void;
+  isChangingRole: boolean;
+  isDemotingToUser: boolean;
 }
 
-function ChangeRoleModal({ isOpen, onClose, admin, onChangeRole, isPending }: ChangeRoleModalProps) {
+function ManageRoleModal({ 
+  isOpen, 
+  onClose, 
+  admin, 
+  onChangeRole, 
+  onDemoteToUser,
+  isChangingRole,
+  isDemotingToUser,
+}: ManageRoleModalProps) {
+  const [selectedAction, setSelectedAction] = useState<RoleAction | null>(null);
   const currentRole = admin?.role?.level;
-  const newRole: "MANAGER" | "OPERATOR" = currentRole === "MANAGER" ? "OPERATOR" : "MANAGER";
-  const isPromotion = newRole === "MANAGER";
+  const isPending = isChangingRole || isDemotingToUser;
+
+  // Reset selection when modal opens/closes
+  const handleClose = () => {
+    setSelectedAction(null);
+    onClose();
+  };
 
   if (!isOpen || !admin) return null;
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onChangeRole(newRole);
-  };
 
   const adminName = admin.firstName || admin.lastName
     ? `${admin.firstName || ""} ${admin.lastName || ""}`.trim()
     : admin.email?.split("@")[0] || "Unknown";
 
+  // Determine available actions based on current role
+  const availableActions: { action: RoleAction; label: string; description: string; targetRole: string; icon: React.ReactNode; variant: "default" | "destructive" | "outline" }[] = [];
+
+  if (currentRole === "OPERATOR") {
+    availableActions.push({
+      action: "PROMOTE_TO_MANAGER",
+      label: "Promote to Manager",
+      description: "Grant Manager permissions including ability to invite Operators",
+      targetRole: "Manager",
+      icon: <ArrowUp className="w-4 h-4" />,
+      variant: "default",
+    });
+  }
+
+  if (currentRole === "MANAGER") {
+    availableActions.push({
+      action: "DEMOTE_TO_OPERATOR",
+      label: "Demote to Operator",
+      description: "Reduce to Operator permissions with limited access",
+      targetRole: "Operator",
+      icon: <ArrowDown className="w-4 h-4" />,
+      variant: "outline",
+    });
+  }
+
+  // Both MANAGER and OPERATOR can be demoted to USER
+  if (currentRole === "MANAGER" || currentRole === "OPERATOR") {
+    availableActions.push({
+      action: "DEMOTE_TO_USER",
+      label: "Remove Admin Access",
+      description: "Completely remove admin privileges and revert to regular user",
+      targetRole: "User",
+      icon: <UserMinus className="w-4 h-4" />,
+      variant: "destructive",
+    });
+  }
+
+  const handleConfirm = () => {
+    if (!selectedAction) return;
+
+    if (selectedAction === "PROMOTE_TO_MANAGER") {
+      onChangeRole("MANAGER");
+    } else if (selectedAction === "DEMOTE_TO_OPERATOR") {
+      onChangeRole("OPERATOR");
+    } else if (selectedAction === "DEMOTE_TO_USER") {
+      onDemoteToUser();
+    }
+  };
+
+  const getTargetRoleBadge = () => {
+    if (!selectedAction) return null;
+    
+    if (selectedAction === "PROMOTE_TO_MANAGER") {
+      return (
+        <Badge variant="secondary" className={`${roleConfig.MANAGER.bgColor} ${roleConfig.MANAGER.color} border-0 gap-1.5 font-medium`}>
+          <ShieldCheck className="w-3.5 h-3.5" />
+          Manager
+        </Badge>
+      );
+    } else if (selectedAction === "DEMOTE_TO_OPERATOR") {
+      return (
+        <Badge variant="secondary" className={`${roleConfig.OPERATOR.bgColor} ${roleConfig.OPERATOR.color} border-0 gap-1.5 font-medium`}>
+          <User className="w-3.5 h-3.5" />
+          Operator
+        </Badge>
+      );
+    } else {
+      return (
+        <Badge variant="secondary" className="bg-gray-500/10 text-gray-600 dark:text-gray-400 border-0 gap-1.5 font-medium">
+          <User className="w-3.5 h-3.5" />
+          User
+        </Badge>
+      );
+    }
+  };
+
+  const getWarningMessage = () => {
+    if (!selectedAction) return null;
+    
+    if (selectedAction === "PROMOTE_TO_MANAGER") {
+      return {
+        className: "bg-blue-500/10 border-blue-500/20",
+        textClassName: "text-blue-600 dark:text-blue-400",
+        message: "This admin will gain Manager permissions, including the ability to invite Operators and manage more resources.",
+      };
+    } else if (selectedAction === "DEMOTE_TO_OPERATOR") {
+      return {
+        className: "bg-amber-500/10 border-amber-500/20",
+        textClassName: "text-amber-600 dark:text-amber-400",
+        message: "This admin will lose Manager permissions and become an Operator with limited access.",
+      };
+    } else {
+      return {
+        className: "bg-red-500/10 border-red-500/20",
+        textClassName: "text-red-600 dark:text-red-400",
+        message: "This will completely remove admin access. The user will lose all admin privileges and be reverted to a regular user. This action is irreversible without re-inviting them.",
+      };
+    }
+  };
+
+  const warning = getWarningMessage();
+
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={handleClose}>
       <Card className="w-full max-w-md" onClick={(e) => e.stopPropagation()}>
         <CardHeader className="relative pb-4">
           <Button
             variant="ghost"
             size="icon"
-            onClick={onClose}
+            onClick={handleClose}
             className="absolute right-4 top-4 h-8 w-8"
           >
             <X className="w-4 h-4" />
           </Button>
           <div className="flex items-center gap-3">
-            <div className={`h-10 w-10 rounded-xl flex items-center justify-center ${isPromotion ? "bg-blue-500/10" : "bg-violet-500/10"}`}>
-              <ArrowUpDown className={`h-5 w-5 ${isPromotion ? "text-blue-600 dark:text-blue-400" : "text-violet-600 dark:text-violet-400"}`} />
+            <div className="h-10 w-10 rounded-xl bg-foreground/5 flex items-center justify-center">
+              <ArrowUpDown className="h-5 w-5 text-foreground/70" />
             </div>
             <div>
-              <CardTitle>{isPromotion ? "Promote" : "Demote"} Admin</CardTitle>
-              <CardDescription>
-                {isPromotion ? "Upgrade to Manager role" : "Downgrade to Operator role"}
-              </CardDescription>
+              <CardTitle>Manage Admin Role</CardTitle>
+              <CardDescription>Change role or remove admin access</CardDescription>
             </div>
           </div>
         </CardHeader>
-        <CardContent className="pt-2">
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Admin info */}
-            <div className="p-4 rounded-lg bg-muted/50 space-y-3">
-              <div className="flex items-center gap-3">
-                <Avatar className="h-10 w-10 border border-border/50">
-                  <AvatarFallback className="text-sm bg-muted font-medium">
-                    {(admin.email?.slice(0, 2) || "AD").toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <p className="text-sm font-medium">{adminName}</p>
-                  <p className="text-xs text-muted-foreground">{admin.email}</p>
-                </div>
-              </div>
-              
-              {/* Role change visualization */}
-              <div className="flex items-center justify-center gap-3 pt-2">
-                <Badge
-                  variant="secondary"
-                  className={`${roleConfig[currentRole as RoleLevel]?.bgColor || ""} ${roleConfig[currentRole as RoleLevel]?.color || ""} border-0 gap-1.5 font-medium`}
-                >
-                  {currentRole === "MANAGER" ? <ShieldCheck className="w-3.5 h-3.5" /> : <User className="w-3.5 h-3.5" />}
-                  {roleConfig[currentRole as RoleLevel]?.label || currentRole}
-                </Badge>
-                <span className="text-muted-foreground">→</span>
-                <Badge
-                  variant="secondary"
-                  className={`${roleConfig[newRole]?.bgColor || ""} ${roleConfig[newRole]?.color || ""} border-0 gap-1.5 font-medium`}
-                >
-                  {newRole === "MANAGER" ? <ShieldCheck className="w-3.5 h-3.5" /> : <User className="w-3.5 h-3.5" />}
-                  {roleConfig[newRole]?.label || newRole}
-                </Badge>
+        <CardContent className="pt-2 space-y-6">
+          {/* Admin info */}
+          <div className="p-4 rounded-lg bg-muted/50 space-y-3">
+            <div className="flex items-center gap-3">
+              <Avatar className="h-10 w-10 border border-border/50">
+                <AvatarFallback className="text-sm bg-muted font-medium">
+                  {(admin.email?.slice(0, 2) || "AD").toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <p className="text-sm font-medium">{adminName}</p>
+                <p className="text-xs text-muted-foreground">{admin.email}</p>
               </div>
             </div>
+            
+            {/* Current role and target visualization */}
+            <div className="flex items-center justify-center gap-3 pt-2">
+              <Badge
+                variant="secondary"
+                className={`${roleConfig[currentRole as RoleLevel]?.bgColor || ""} ${roleConfig[currentRole as RoleLevel]?.color || ""} border-0 gap-1.5 font-medium`}
+              >
+                {currentRole === "MANAGER" ? <ShieldCheck className="w-3.5 h-3.5" /> : <User className="w-3.5 h-3.5" />}
+                {roleConfig[currentRole as RoleLevel]?.label || currentRole}
+              </Badge>
+              {selectedAction && (
+                <>
+                  <span className="text-muted-foreground">→</span>
+                  {getTargetRoleBadge()}
+                </>
+              )}
+            </div>
+          </div>
 
-            {/* Warning/Info */}
-            <div className={`p-3 rounded-lg border ${isPromotion ? "bg-blue-500/10 border-blue-500/20" : "bg-amber-500/10 border-amber-500/20"}`}>
-              <p className={`text-xs ${isPromotion ? "text-blue-600 dark:text-blue-400" : "text-amber-600 dark:text-amber-400"}`}>
-                {isPromotion ? (
-                  <>
-                    <strong>Promotion:</strong> This admin will gain Manager permissions, including the ability to invite Operators and manage more resources.
-                  </>
-                ) : (
-                  <>
-                    <strong>Demotion:</strong> This admin will lose Manager permissions and become an Operator with limited access.
-                  </>
-                )}
+          {/* Action selection */}
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">Select Action</Label>
+            <div className="space-y-2">
+              {availableActions.map((action) => (
+                <button
+                  key={action.action}
+                  type="button"
+                  onClick={() => setSelectedAction(action.action)}
+                  disabled={isPending}
+                  className={`w-full p-3 rounded-lg border text-left transition-all ${
+                    selectedAction === action.action
+                      ? action.variant === "destructive"
+                        ? "border-red-500 bg-red-500/10"
+                        : action.variant === "default"
+                        ? "border-blue-500 bg-blue-500/10"
+                        : "border-amber-500 bg-amber-500/10"
+                      : "border-border/50 hover:border-border hover:bg-muted/50"
+                  } ${isPending ? "opacity-50 cursor-not-allowed" : ""}`}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className={`mt-0.5 ${
+                      action.variant === "destructive" 
+                        ? "text-red-600 dark:text-red-400" 
+                        : action.variant === "default"
+                        ? "text-blue-600 dark:text-blue-400"
+                        : "text-amber-600 dark:text-amber-400"
+                    }`}>
+                      {action.icon}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium">{action.label}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{action.description}</p>
+                    </div>
+                    <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                      selectedAction === action.action 
+                        ? action.variant === "destructive"
+                          ? "border-red-500 bg-red-500"
+                          : action.variant === "default"
+                          ? "border-blue-500 bg-blue-500"
+                          : "border-amber-500 bg-amber-500"
+                        : "border-muted-foreground/30"
+                    }`}>
+                      {selectedAction === action.action && (
+                        <div className="w-1.5 h-1.5 rounded-full bg-white" />
+                      )}
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Warning message */}
+          {warning && (
+            <div className={`p-3 rounded-lg border ${warning.className}`}>
+              <p className={`text-xs ${warning.textClassName}`}>
+                <strong>Note:</strong> {warning.message}
               </p>
             </div>
+          )}
 
-            <div className="flex gap-3 pt-2">
-              <Button type="button" variant="outline" className="flex-1" onClick={onClose} disabled={isPending}>
-                Cancel
-              </Button>
-              <Button 
-                type="submit" 
-                className="flex-1"
-                variant={isPromotion ? "default" : "destructive"}
-                disabled={isPending}
-              >
-                {isPending ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    {isPromotion ? "Promoting..." : "Demoting..."}
-                  </>
-                ) : (
-                  <>
-                    <ArrowUpDown className="w-4 h-4 mr-2" />
-                    {isPromotion ? "Promote to Manager" : "Demote to Operator"}
-                  </>
-                )}
-              </Button>
-            </div>
-          </form>
+          {/* Action buttons */}
+          <div className="flex gap-3 pt-2">
+            <Button type="button" variant="outline" className="flex-1" onClick={handleClose} disabled={isPending}>
+              Cancel
+            </Button>
+            <Button 
+              type="button"
+              className="flex-1"
+              variant={selectedAction === "DEMOTE_TO_USER" ? "destructive" : "default"}
+              disabled={isPending || !selectedAction}
+              onClick={handleConfirm}
+            >
+              {isPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                <>
+                  {selectedAction === "PROMOTE_TO_MANAGER" && <ArrowUp className="w-4 h-4 mr-2" />}
+                  {selectedAction === "DEMOTE_TO_OPERATOR" && <ArrowDown className="w-4 h-4 mr-2" />}
+                  {selectedAction === "DEMOTE_TO_USER" && <UserMinus className="w-4 h-4 mr-2" />}
+                  {!selectedAction && "Select an action"}
+                  {selectedAction === "PROMOTE_TO_MANAGER" && "Promote"}
+                  {selectedAction === "DEMOTE_TO_OPERATOR" && "Demote"}
+                  {selectedAction === "DEMOTE_TO_USER" && "Remove Admin"}
+                </>
+              )}
+            </Button>
+          </div>
         </CardContent>
       </Card>
     </div>
@@ -418,10 +584,11 @@ export default function AdminUsersPage() {
   const { inviteAdmin, isPending: isInviting } = useInviteAdmin();
   const { invalidateUserCache, isPending: isInvalidatingCache } = useInvalidateUserCache();
   const { changeAdminRole, isPending: isChangingRole } = useChangeAdminRole();
+  const { demoteAdminToUser, isPending: isDemotingToUser } = useDemoteAdminToUser();
   const { session: currentAdmin } = useAdminSession();
   const isMasterAdmin = currentAdmin?.role === "MASTER_ADMIN";
   const [showInviteModal, setShowInviteModal] = useState(false);
-  const [changeRoleModal, setChangeRoleModal] = useState<{
+  const [manageRoleModal, setManageRoleModal] = useState<{
     isOpen: boolean;
     admin: AdminUser | null;
   }>({ isOpen: false, admin: null });
@@ -503,15 +670,23 @@ export default function AdminUsersPage() {
   };
 
   const handleChangeRole = (newRole: "MANAGER" | "OPERATOR") => {
-    if (!changeRoleModal.admin) return;
+    if (!manageRoleModal.admin) return;
     changeAdminRole(
-      { targetEmail: changeRoleModal.admin.email, newRole },
-      { onSuccess: () => setChangeRoleModal({ isOpen: false, admin: null }) }
+      { targetEmail: manageRoleModal.admin.email, newRole },
+      { onSuccess: () => setManageRoleModal({ isOpen: false, admin: null }) }
     );
   };
 
-  const openChangeRoleModal = (admin: AdminUser) => {
-    setChangeRoleModal({ isOpen: true, admin });
+  const handleDemoteToUser = () => {
+    if (!manageRoleModal.admin) return;
+    demoteAdminToUser(
+      { targetEmail: manageRoleModal.admin.email },
+      { onSuccess: () => setManageRoleModal({ isOpen: false, admin: null }) }
+    );
+  };
+
+  const openManageRoleModal = (admin: AdminUser) => {
+    setManageRoleModal({ isOpen: true, admin });
   };
 
   const formatDate = (dateString: string) => {
@@ -766,13 +941,13 @@ export default function AdminUsersPage() {
                                             <Button
                                               variant="outline"
                                               size="sm"
-                                              onClick={() => openChangeRoleModal(adminUser)}
-                                              disabled={isChangingRole}
+                                              onClick={() => openManageRoleModal(adminUser)}
+                                              disabled={isChangingRole || isDemotingToUser}
                                               className="gap-1.5 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-500/10 dark:text-blue-400 border-border/50"
-                                              title={roleLevel === "MANAGER" ? "Demote to Operator" : "Promote to Manager"}
+                                              title="Manage role or remove admin access"
                                             >
                                               <ArrowUpDown className="w-4 h-4" />
-                                              <span className="hidden sm:inline">Change Role</span>
+                                              <span className="hidden sm:inline">Manage Role</span>
                                             </Button>
                                           )}
                                           <Button
@@ -824,12 +999,14 @@ export default function AdminUsersPage() {
           currentAdminRole={currentAdmin?.role}
         />
 
-        <ChangeRoleModal
-          isOpen={changeRoleModal.isOpen}
-          onClose={() => setChangeRoleModal({ isOpen: false, admin: null })}
-          admin={changeRoleModal.admin}
+        <ManageRoleModal
+          isOpen={manageRoleModal.isOpen}
+          onClose={() => setManageRoleModal({ isOpen: false, admin: null })}
+          admin={manageRoleModal.admin}
           onChangeRole={handleChangeRole}
-          isPending={isChangingRole}
+          onDemoteToUser={handleDemoteToUser}
+          isChangingRole={isChangingRole}
+          isDemotingToUser={isDemotingToUser}
         />
         </SidebarProvider>
       </ManagerGuard>
