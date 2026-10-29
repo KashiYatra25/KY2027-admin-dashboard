@@ -19,7 +19,10 @@ export type Permission =
   | "view_partners"
   | "manage_partners"
   | "view_settings"
-  | "manage_settings";
+  | "manage_settings"
+  | "view_manual_payments"
+  | "create_manual_payments"
+  | "process_manual_payments";
 
 /**
  * Role hierarchy (higher = more permissions)
@@ -45,6 +48,9 @@ export const ROLE_PERMISSIONS: Record<RoleLevel, Permission[]> = {
     "manage_partners",
     "view_settings",
     "manage_settings",
+    "view_manual_payments",
+    "create_manual_payments",
+    "process_manual_payments",
   ],
   MANAGER: [
     "view_users",
@@ -55,10 +61,14 @@ export const ROLE_PERMISSIONS: Record<RoleLevel, Permission[]> = {
     "view_partners",
     "manage_partners",
     "view_settings",
+    "view_manual_payments",
+    "create_manual_payments",
   ],
   OPERATOR: [
     "view_users",
     "view_settings",
+    "view_manual_payments",
+    "create_manual_payments",
   ],
 };
 
@@ -76,6 +86,9 @@ export const PERMISSION_LABELS: Record<Permission, string> = {
   manage_partners: "Create/edit/delete partners",
   view_settings: "View settings",
   manage_settings: "Modify settings",
+  view_manual_payments: "View manual payment requests",
+  create_manual_payments: "Create manual payment requests",
+  process_manual_payments: "Approve/reject manual payment requests",
 };
 
 /**
@@ -92,6 +105,9 @@ export const PERMISSION_MIN_ROLE: Record<Permission, RoleLevel> = {
   manage_partners: "MANAGER",
   view_settings: "OPERATOR",
   manage_settings: "MASTER_ADMIN",
+  view_manual_payments: "OPERATOR",
+  create_manual_payments: "OPERATOR",
+  process_manual_payments: "MASTER_ADMIN",
 };
 
 /**
