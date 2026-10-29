@@ -576,6 +576,28 @@ function CreateRequestModal({ open, onClose, onSuccess }: CreateRequestModalProp
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="!max-w-4xl max-h-[90vh] overflow-y-auto bg-background p-0">
+        {/* Loading Overlay */}
+        {(isUploading || isCreating) && (
+          <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm">
+            <div className="flex flex-col items-center gap-4 p-8 rounded-2xl bg-card border shadow-lg">
+              <div className="relative">
+                <RefreshCw className="h-10 w-10 text-primary animate-spin" />
+              </div>
+              <div className="text-center">
+                <p className="font-semibold text-lg">
+                  {isUploading ? "Uploading files..." : "Creating request..."}
+                </p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {isUploading 
+                    ? `Uploading ${bonafideFiles.length} file(s) to storage`
+                    : "Submitting payment request for approval"
+                  }
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Header */}
         <div className="sticky top-0 z-10 bg-background border-b px-6 py-4">
           <DialogHeader>
@@ -888,36 +910,60 @@ function CreateRequestModal({ open, onClose, onSuccess }: CreateRequestModalProp
                 </div>
               )}
               
-              {/* Uploaded Files List */}
+              {/* Uploaded Files List with Preview */}
               {bonafideFiles.length > 0 && (
-                <div className="space-y-2">
-                  {bonafideFiles.map((file, index) => (
-                    <div 
-                      key={index} 
-                      className="flex items-center justify-between bg-muted/50 border rounded-lg px-4 py-3"
-                    >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-8 h-8 rounded-lg bg-background border flex items-center justify-center flex-shrink-0">
-                          <FileText className="h-4 w-4 text-muted-foreground" />
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {bonafideFiles.map((file, index) => {
+                    const isImage = file.type.startsWith("image/");
+                    const previewUrl = isImage ? URL.createObjectURL(file) : null;
+                    
+                    return (
+                      <div 
+                        key={index} 
+                        className="relative group rounded-xl border bg-muted/30 overflow-hidden"
+                      >
+                        {/* Preview Area */}
+                        <div className="aspect-square relative">
+                          {isImage && previewUrl ? (
+                            <img
+                              src={previewUrl}
+                              alt={file.name}
+                              className="w-full h-full object-cover"
+                              onLoad={() => URL.revokeObjectURL(previewUrl)}
+                            />
+                          ) : (
+                            <div className="w-full h-full flex flex-col items-center justify-center bg-muted/50">
+                              <FileText className="h-10 w-10 text-muted-foreground mb-2" />
+                              <span className="text-xs text-muted-foreground uppercase font-medium">
+                                {file.name.split('.').pop()}
+                              </span>
+                            </div>
+                          )}
+                          
+                          {/* Remove Button Overlay */}
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => handleRemoveBonafide(index)}
+                            className="absolute top-2 right-2 h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
                         </div>
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium truncate">{file.name}</p>
+                        
+                        {/* File Info */}
+                        <div className="p-2 border-t bg-background/80">
+                          <p className="text-xs font-medium truncate" title={file.name}>
+                            {file.name}
+                          </p>
                           <p className="text-xs text-muted-foreground">
                             {(file.size / 1024).toFixed(1)} KB
                           </p>
                         </div>
                       </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleRemoveBonafide(index)}
-                        className="h-8 w-8 p-0 hover:bg-red-100 dark:hover:bg-red-900/30"
-                      >
-                        <X className="h-4 w-4 text-red-500" />
-                      </Button>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -984,14 +1030,19 @@ function CreateRequestModal({ open, onClose, onSuccess }: CreateRequestModalProp
           )}
 
           <div className="flex gap-3 justify-end">
-            <Button variant="outline" onClick={handleClose} disabled={isCreating}>
+            <Button variant="outline" onClick={handleClose} disabled={isCreating || isUploading}>
               Cancel
             </Button>
-            <Button onClick={handleSubmit} disabled={!isValid || isCreating}>
-              {isCreating ? (
+            <Button onClick={handleSubmit} disabled={!isValid || isCreating || isUploading}>
+              {isUploading ? (
                 <>
                   <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                  Creating...
+                  Uploading files...
+                </>
+              ) : isCreating ? (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  Creating request...
                 </>
               ) : (
                 <>
