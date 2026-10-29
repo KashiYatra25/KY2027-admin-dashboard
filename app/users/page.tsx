@@ -394,6 +394,7 @@ export default function UsersPage() {
   const paidCount = users.filter((u) => u.isPaidUser).length;
   const suspendedCount = users.filter((u) => u.isSuspended).length;
   const verifiedPhoneCount = users.filter((u) => u.phone).length;
+  const verifiedProfileCount = users.filter((u) => u.kyId).length;
 
   // Filter options
   const statusFilterOptions = [
@@ -530,7 +531,7 @@ export default function UsersPage() {
                 </div>
 
                 {/* Stats */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
                   <StatCard
                     title="Total Users"
                     value={pagination.totalCount}
@@ -543,6 +544,13 @@ export default function UsersPage() {
                     value={iitbhuCount}
                     icon={Building2}
                     iconClassName="bg-blue-500/10 text-blue-600 dark:text-blue-400"
+                    isLoading={isLoading}
+                  />
+                  <StatCard
+                    title="Verified Profiles"
+                    value={verifiedProfileCount}
+                    icon={IdCard}
+                    iconClassName="bg-green-500/10 text-green-600 dark:text-green-400"
                     isLoading={isLoading}
                   />
                   <StatCard
