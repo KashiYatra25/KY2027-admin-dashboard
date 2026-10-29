@@ -421,10 +421,11 @@ export default function UsersPage() {
 
   // Export to CSV
   const handleExport = () => {
-    const headers = ["Name", "Email", "College", "KY ID", "IIT BHU", "Paid", "Joined"];
+    const headers = ["Name", "Email", "Phone", "College", "KY ID", "IIT BHU", "Paid", "Joined"];
     const rows = users.map((user) => [
       `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.slugName,
       user.email,
+      user.phone || "",
       user.college || "",
       user.kyId || "",
       user.isFromIITBhu ? "Yes" : "No",
@@ -580,6 +581,7 @@ export default function UsersPage() {
                               <TableRow className="hover:bg-transparent border-border/50">
                                 <TableHead className="min-w-[280px]">User</TableHead>
                                 <TableHead className="hidden md:table-cell min-w-[180px]">College</TableHead>
+                                <TableHead className="hidden lg:table-cell min-w-[140px]">Phone</TableHead>
                                 <TableHead className="min-w-[100px]">Status</TableHead>
                                 <TableHead className="hidden lg:table-cell min-w-[100px]">Joined</TableHead>
                                 <TableHead className="text-right min-w-[120px]">Actions</TableHead>
@@ -614,6 +616,11 @@ export default function UsersPage() {
                                   <TableCell className="hidden md:table-cell">
                                     <p className="text-sm text-foreground/80 max-w-[200px] truncate">
                                       {user.college || "—"}
+                                    </p>
+                                  </TableCell>
+                                  <TableCell className="hidden lg:table-cell">
+                                    <p className="text-sm text-foreground/80 font-mono">
+                                      {user.phone || <span className="text-muted-foreground italic">Not verified</span>}
                                     </p>
                                   </TableCell>
                                   <TableCell>

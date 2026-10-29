@@ -5,7 +5,7 @@ import { SidebarProvider } from "@/hooks";
 import { AuthGuard, ManagerGuard } from "@/components/auth";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Topbar } from "@/components/layout/Topbar";
-import { useAdminUsers, useInviteAdmin, useInvalidateUserCache } from "@/lib/api/hooks";
+import { useAdminUsers, useInviteAdmin, useInvalidateUserCache, useChangeAdminRole } from "@/lib/api/hooks";
 import { useAdminSession } from "@/lib/auth";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -38,6 +38,7 @@ import {
   Download,
   Search,
   Trash2,
+  ArrowUpDown,
 } from "lucide-react";
 import type { RoleLevel } from "@/lib/api/helper/types";
 
@@ -276,6 +277,139 @@ function InviteModal({ isOpen, onClose, onInvite, isPending, currentAdminRole }:
 }
 
 // ═══════════════════════════════════════════════════════════════════
+// CHANGE ROLE MODAL
+// ═══════════════════════════════════════════════════════════════════
+
+interface ChangeRoleModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  admin: AdminUser | null;
+  onChangeRole: (newRole: "MANAGER" | "OPERATOR") => void;
+  isPending: boolean;
+}
+
+function ChangeRoleModal({ isOpen, onClose, admin, onChangeRole, isPending }: ChangeRoleModalProps) {
+  const currentRole = admin?.role?.level;
+  const newRole: "MANAGER" | "OPERATOR" = currentRole === "MANAGER" ? "OPERATOR" : "MANAGER";
+  const isPromotion = newRole === "MANAGER";
+
+  if (!isOpen || !admin) return null;
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onChangeRole(newRole);
+  };
+
+  const adminName = admin.firstName || admin.lastName
+    ? `${admin.firstName || ""} ${admin.lastName || ""}`.trim()
+    : admin.email?.split("@")[0] || "Unknown";
+
+  return (
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <Card className="w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+        <CardHeader className="relative pb-4">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onClose}
+            className="absolute right-4 top-4 h-8 w-8"
+          >
+            <X className="w-4 h-4" />
+          </Button>
+          <div className="flex items-center gap-3">
+            <div className={`h-10 w-10 rounded-xl flex items-center justify-center ${isPromotion ? "bg-blue-500/10" : "bg-violet-500/10"}`}>
+              <ArrowUpDown className={`h-5 w-5 ${isPromotion ? "text-blue-600 dark:text-blue-400" : "text-violet-600 dark:text-violet-400"}`} />
+            </div>
+            <div>
+              <CardTitle>{isPromotion ? "Promote" : "Demote"} Admin</CardTitle>
+              <CardDescription>
+                {isPromotion ? "Upgrade to Manager role" : "Downgrade to Operator role"}
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="pt-2">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Admin info */}
+            <div className="p-4 rounded-lg bg-muted/50 space-y-3">
+              <div className="flex items-center gap-3">
+                <Avatar className="h-10 w-10 border border-border/50">
+                  <AvatarFallback className="text-sm bg-muted font-medium">
+                    {(admin.email?.slice(0, 2) || "AD").toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <p className="text-sm font-medium">{adminName}</p>
+                  <p className="text-xs text-muted-foreground">{admin.email}</p>
+                </div>
+              </div>
+              
+              {/* Role change visualization */}
+              <div className="flex items-center justify-center gap-3 pt-2">
+                <Badge
+                  variant="secondary"
+                  className={`${roleConfig[currentRole as RoleLevel]?.bgColor || ""} ${roleConfig[currentRole as RoleLevel]?.color || ""} border-0 gap-1.5 font-medium`}
+                >
+                  {currentRole === "MANAGER" ? <ShieldCheck className="w-3.5 h-3.5" /> : <User className="w-3.5 h-3.5" />}
+                  {roleConfig[currentRole as RoleLevel]?.label || currentRole}
+                </Badge>
+                <span className="text-muted-foreground">→</span>
+                <Badge
+                  variant="secondary"
+                  className={`${roleConfig[newRole]?.bgColor || ""} ${roleConfig[newRole]?.color || ""} border-0 gap-1.5 font-medium`}
+                >
+                  {newRole === "MANAGER" ? <ShieldCheck className="w-3.5 h-3.5" /> : <User className="w-3.5 h-3.5" />}
+                  {roleConfig[newRole]?.label || newRole}
+                </Badge>
+              </div>
+            </div>
+
+            {/* Warning/Info */}
+            <div className={`p-3 rounded-lg border ${isPromotion ? "bg-blue-500/10 border-blue-500/20" : "bg-amber-500/10 border-amber-500/20"}`}>
+              <p className={`text-xs ${isPromotion ? "text-blue-600 dark:text-blue-400" : "text-amber-600 dark:text-amber-400"}`}>
+                {isPromotion ? (
+                  <>
+                    <strong>Promotion:</strong> This admin will gain Manager permissions, including the ability to invite Operators and manage more resources.
+                  </>
+                ) : (
+                  <>
+                    <strong>Demotion:</strong> This admin will lose Manager permissions and become an Operator with limited access.
+                  </>
+                )}
+              </p>
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <Button type="button" variant="outline" className="flex-1" onClick={onClose} disabled={isPending}>
+                Cancel
+              </Button>
+              <Button 
+                type="submit" 
+                className="flex-1"
+                variant={isPromotion ? "default" : "destructive"}
+                disabled={isPending}
+              >
+                {isPending ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    {isPromotion ? "Promoting..." : "Demoting..."}
+                  </>
+                ) : (
+                  <>
+                    <ArrowUpDown className="w-4 h-4 mr-2" />
+                    {isPromotion ? "Promote to Manager" : "Demote to Operator"}
+                  </>
+                )}
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
 // MAIN PAGE
 // ═══════════════════════════════════════════════════════════════════
 
@@ -283,9 +417,14 @@ export default function AdminUsersPage() {
   const { admins, isLoading, isError, refetch } = useAdminUsers();
   const { inviteAdmin, isPending: isInviting } = useInviteAdmin();
   const { invalidateUserCache, isPending: isInvalidatingCache } = useInvalidateUserCache();
+  const { changeAdminRole, isPending: isChangingRole } = useChangeAdminRole();
   const { session: currentAdmin } = useAdminSession();
   const isMasterAdmin = currentAdmin?.role === "MASTER_ADMIN";
   const [showInviteModal, setShowInviteModal] = useState(false);
+  const [changeRoleModal, setChangeRoleModal] = useState<{
+    isOpen: boolean;
+    admin: AdminUser | null;
+  }>({ isOpen: false, admin: null });
   const [roleFilter, setRoleFilter] = useState<string[]>([]);
 
   // Prepare data with searchable fields
@@ -361,6 +500,18 @@ export default function AdminUsersPage() {
       { targetEmail: email, role },
       { onSuccess: () => setShowInviteModal(false) }
     );
+  };
+
+  const handleChangeRole = (newRole: "MANAGER" | "OPERATOR") => {
+    if (!changeRoleModal.admin) return;
+    changeAdminRole(
+      { targetEmail: changeRoleModal.admin.email, newRole },
+      { onSuccess: () => setChangeRoleModal({ isOpen: false, admin: null }) }
+    );
+  };
+
+  const openChangeRoleModal = (admin: AdminUser) => {
+    setChangeRoleModal({ isOpen: true, admin });
   };
 
   const formatDate = (dateString: string) => {
@@ -609,17 +760,33 @@ export default function AdminUsersPage() {
                                     </TableCell>
                                     {isMasterAdmin && (
                                       <TableCell className="text-right">
-                                        <Button
-                                          variant="outline"
-                                          size="sm"
-                                          onClick={() => invalidateUserCache(adminUser.id)}
-                                          disabled={isInvalidatingCache}
-                                          className="gap-1.5 text-orange-600 hover:text-orange-700 hover:bg-orange-50 dark:hover:bg-orange-500/10 dark:text-orange-400 border-border/50"
-                                          title="Clear cached data for this admin"
-                                        >
-                                          <Trash2 className="w-4 h-4" />
-                                          <span className="hidden sm:inline">Clear Cache</span>
-                                        </Button>
+                                        <div className="flex items-center justify-end gap-2">
+                                          {/* Change Role button - only for non-MASTER_ADMIN and non-self */}
+                                          {roleLevel !== "MASTER_ADMIN" && !isCurrentUser && (
+                                            <Button
+                                              variant="outline"
+                                              size="sm"
+                                              onClick={() => openChangeRoleModal(adminUser)}
+                                              disabled={isChangingRole}
+                                              className="gap-1.5 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-500/10 dark:text-blue-400 border-border/50"
+                                              title={roleLevel === "MANAGER" ? "Demote to Operator" : "Promote to Manager"}
+                                            >
+                                              <ArrowUpDown className="w-4 h-4" />
+                                              <span className="hidden sm:inline">Change Role</span>
+                                            </Button>
+                                          )}
+                                          <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => invalidateUserCache(adminUser.id)}
+                                            disabled={isInvalidatingCache}
+                                            className="gap-1.5 text-orange-600 hover:text-orange-700 hover:bg-orange-50 dark:hover:bg-orange-500/10 dark:text-orange-400 border-border/50"
+                                            title="Clear cached data for this admin"
+                                          >
+                                            <Trash2 className="w-4 h-4" />
+                                            <span className="hidden sm:inline">Clear Cache</span>
+                                          </Button>
+                                        </div>
                                       </TableCell>
                                     )}
                                   </TableRow>
@@ -655,6 +822,14 @@ export default function AdminUsersPage() {
           onInvite={handleInvite}
           isPending={isInviting}
           currentAdminRole={currentAdmin?.role}
+        />
+
+        <ChangeRoleModal
+          isOpen={changeRoleModal.isOpen}
+          onClose={() => setChangeRoleModal({ isOpen: false, admin: null })}
+          admin={changeRoleModal.admin}
+          onChangeRole={handleChangeRole}
+          isPending={isChangingRole}
         />
         </SidebarProvider>
       </ManagerGuard>
