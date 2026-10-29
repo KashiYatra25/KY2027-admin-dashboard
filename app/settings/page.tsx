@@ -417,8 +417,8 @@ export default function SettingsPage() {
                         <div className="p-3 rounded-lg bg-muted/30 space-y-2">
                           <p className="text-sm font-medium">Invalidate All Caches</p>
                           <p className="text-xs text-muted-foreground">
-                            Clears all application caches including schedule, events, passes, and user data caches.
-                            Use this after seeding data or if you notice stale data issues.
+                            Clears all application caches including schedule, events, passes, user data caches (Redis),
+                            AND all frontend query caches (React Query). The page will refetch fresh data automatically.
                           </p>
                           <p className="text-xs text-amber-600 dark:text-amber-400">
                             ⚠️ This will not affect rate limits, OTP state, or admin sessions.
