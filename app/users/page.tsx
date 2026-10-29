@@ -23,6 +23,8 @@ import {
   DataTableFilter,
   DataTableToolbar,
   DataTableEmpty,
+  DataTableColumnHeader,
+  type SortDirection,
 } from "@/components/ui/data-table";
 import {
   RefreshCw,
@@ -43,6 +45,9 @@ import {
   Ban,
   Trash2,
   DollarSign,
+  Phone,
+  IdCard,
+  CheckCircle,
 } from "lucide-react";
 
 // ═══════════════════════════════════════════════════════════════════
@@ -101,6 +106,7 @@ function TableSkeleton() {
       <div className="flex items-center gap-4 px-4 py-4 border-b border-border/50">
         <Skeleton className="h-9 w-[300px]" />
         <Skeleton className="h-9 w-24" />
+        <Skeleton className="h-9 w-24" />
       </div>
       <div className="p-4 space-y-4">
         {[...Array(5)].map((_, i) => (
@@ -110,8 +116,11 @@ function TableSkeleton() {
               <Skeleton className="h-4 w-32" />
               <Skeleton className="h-3 w-48" />
             </div>
+            <Skeleton className="h-4 w-32 hidden md:block" />
+            <Skeleton className="h-4 w-24 hidden lg:block" />
+            <Skeleton className="h-4 w-28 hidden lg:block" />
             <Skeleton className="h-6 w-20 rounded-full" />
-            <Skeleton className="h-4 w-24 hidden md:block" />
+            <Skeleton className="h-4 w-24 hidden xl:block" />
             <Skeleton className="h-8 w-24" />
           </div>
         ))}
@@ -141,7 +150,6 @@ interface UpgradeModalProps {
 }
 
 function UpgradeModal({ isOpen, onClose, user, onUpgrade, isPending, currentAdminRole }: UpgradeModalProps) {
-  // Only MASTER_ADMIN can create Managers, others can only create Operators
   const canCreateManager = currentAdminRole === "MASTER_ADMIN";
   const [role, setRole] = useState<"MANAGER" | "OPERATOR">("OPERATOR");
 
@@ -165,12 +173,7 @@ function UpgradeModal({ isOpen, onClose, user, onUpgrade, isPending, currentAdmi
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={handleClose}>
       <Card className="w-full max-w-md" onClick={(e) => e.stopPropagation()}>
         <CardHeader className="relative">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleClose}
-            className="absolute right-4 top-4 h-8 w-8"
-          >
+          <Button variant="ghost" size="icon" onClick={handleClose} className="absolute right-4 top-4 h-8 w-8">
             <X className="w-4 h-4" />
           </Button>
           <div className="flex items-center gap-3">
@@ -185,16 +188,12 @@ function UpgradeModal({ isOpen, onClose, user, onUpgrade, isPending, currentAdmi
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-5">
-            {/* User info */}
             <div className="p-4 rounded-lg bg-muted/50 space-y-2">
               <p className="text-sm font-medium">{userName}</p>
               <p className="text-xs text-muted-foreground">{user.email}</p>
-              {user.college && (
-                <p className="text-xs text-muted-foreground">{user.college}</p>
-              )}
+              {user.college && <p className="text-xs text-muted-foreground">{user.college}</p>}
             </div>
 
-            {/* Role selection */}
             <div className="space-y-2">
               <Label>Admin Role</Label>
               {canCreateManager ? (
@@ -263,13 +262,20 @@ export default function UsersPage() {
   const [page, setPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [iitbhuFilter, setIitbhuFilter] = useState<string[]>([]);
+  
+  // Filter states
+  const [statusFilter, setStatusFilter] = useState<string[]>([]);
+  const [paymentFilter, setPaymentFilter] = useState<string[]>([]);
+  
+  // Sort state (client-side sorting for current page)
+  const [sortKey, setSortKey] = useState<string | null>(null);
+  const [sortDirection, setSortDirection] = useState<SortDirection>(null);
 
   // Debounce search
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(searchQuery);
-      setPage(1); // Reset to first page on search
+      setPage(1);
     }, 300);
     return () => clearTimeout(timer);
   }, [searchQuery]);
@@ -285,120 +291,165 @@ export default function UsersPage() {
   const { invalidateUserCache, isPending: isInvalidatingCache } = useInvalidateUserCache();
   const { toggleUserPaidStatus, isPending: isTogglingPaidStatus } = useToggleUserPaidStatus();
   
-  // Only MASTER_ADMIN can clear user cache and toggle paid status
   const isMasterAdmin = currentAdmin?.role === "MASTER_ADMIN";
   
-  const [upgradeModal, setUpgradeModal] = useState<{
-    isOpen: boolean;
-    user: RegularUser | null;
-  }>({ isOpen: false, user: null });
+  const [upgradeModal, setUpgradeModal] = useState<{ isOpen: boolean; user: RegularUser | null }>({ isOpen: false, user: null });
+  const [suspendModal, setSuspendModal] = useState<{ isOpen: boolean; user: RegularUser | null }>({ isOpen: false, user: null });
+  const [reactivateModal, setReactivateModal] = useState<{ isOpen: boolean; user: RegularUser | null }>({ isOpen: false, user: null });
+  const [togglePaidModal, setTogglePaidModal] = useState<{ isOpen: boolean; user: RegularUser | null }>({ isOpen: false, user: null });
 
-  const [suspendModal, setSuspendModal] = useState<{
-    isOpen: boolean;
-    user: RegularUser | null;
-  }>({ isOpen: false, user: null });
+  // Handle sort toggle
+  const handleSort = (key: string) => {
+    if (sortKey === key) {
+      if (sortDirection === "asc") {
+        setSortDirection("desc");
+      } else if (sortDirection === "desc") {
+        setSortKey(null);
+        setSortDirection(null);
+      }
+    } else {
+      setSortKey(key);
+      setSortDirection("asc");
+    }
+  };
 
-  const [reactivateModal, setReactivateModal] = useState<{
-    isOpen: boolean;
-    user: RegularUser | null;
-  }>({ isOpen: false, user: null });
-
-  const [togglePaidModal, setTogglePaidModal] = useState<{
-    isOpen: boolean;
-    user: RegularUser | null;
-  }>({ isOpen: false, user: null });
-
-  // Filter by IIT BHU status (client-side for current page)
-  const filteredUsers = useMemo(() => {
-    let result = users;
+  // Filter and sort users (client-side for current page)
+  const filteredAndSortedUsers = useMemo(() => {
+    let result = [...users];
     
-    // Filter by IIT BHU status
-    if (iitbhuFilter.length > 0) {
+    // Apply status filter
+    if (statusFilter.length > 0) {
       result = result.filter((user) => {
-        if (iitbhuFilter.includes("iitbhu") && user.isFromIITBhu) return true;
-        if (iitbhuFilter.includes("external") && !user.isFromIITBhu) return true;
-        if (iitbhuFilter.includes("suspended") && user.isSuspended) return true;
+        if (statusFilter.includes("iitbhu") && user.isFromIITBhu) return true;
+        if (statusFilter.includes("external") && !user.isFromIITBhu) return true;
+        if (statusFilter.includes("suspended") && user.isSuspended) return true;
+        if (statusFilter.includes("verified") && user.phone) return true;
+        if (statusFilter.includes("unverified") && !user.phone) return true;
         return false;
       });
     }
     
+    // Apply payment filter
+    if (paymentFilter.length > 0) {
+      result = result.filter((user) => {
+        if (paymentFilter.includes("paid") && user.isPaidUser) return true;
+        if (paymentFilter.includes("free") && !user.isPaidUser) return true;
+        return false;
+      });
+    }
+    
+    // Apply sorting
+    if (sortKey && sortDirection) {
+      result.sort((a, b) => {
+        let aVal: string | number | null = null;
+        let bVal: string | number | null = null;
+        
+        switch (sortKey) {
+          case "name":
+            aVal = `${a.firstName || ""} ${a.lastName || ""}`.trim().toLowerCase() || a.slugName.toLowerCase();
+            bVal = `${b.firstName || ""} ${b.lastName || ""}`.trim().toLowerCase() || b.slugName.toLowerCase();
+            break;
+          case "email":
+            aVal = a.email.toLowerCase();
+            bVal = b.email.toLowerCase();
+            break;
+          case "college":
+            aVal = (a.college || "").toLowerCase();
+            bVal = (b.college || "").toLowerCase();
+            break;
+          case "phone":
+            aVal = a.phone || "";
+            bVal = b.phone || "";
+            break;
+          case "kyId":
+            aVal = a.kyId || "";
+            bVal = b.kyId || "";
+            break;
+          case "createdAt":
+            aVal = new Date(a.createdAt).getTime();
+            bVal = new Date(b.createdAt).getTime();
+            break;
+          default:
+            return 0;
+        }
+        
+        if (aVal === null || aVal === "") return sortDirection === "asc" ? 1 : -1;
+        if (bVal === null || bVal === "") return sortDirection === "asc" ? -1 : 1;
+        
+        if (typeof aVal === "string" && typeof bVal === "string") {
+          return sortDirection === "asc" ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+        }
+        if (typeof aVal === "number" && typeof bVal === "number") {
+          return sortDirection === "asc" ? aVal - bVal : bVal - aVal;
+        }
+        return 0;
+      });
+    }
+    
     return result;
-  }, [users, iitbhuFilter]);
+  }, [users, statusFilter, paymentFilter, sortKey, sortDirection]);
 
-  // Stats (from current page - for accurate stats, backend should provide totals)
+  // Stats (from current page)
   const iitbhuCount = users.filter((u) => u.isFromIITBhu).length;
   const paidCount = users.filter((u) => u.isPaidUser).length;
   const suspendedCount = users.filter((u) => u.isSuspended).length;
+  const verifiedPhoneCount = users.filter((u) => u.phone).length;
 
   // Filter options
-  const iitbhuFilterOptions = [
+  const statusFilterOptions = [
     { label: "IIT BHU", value: "iitbhu", icon: <Building2 className="w-4 h-4 text-blue-500" />, count: iitbhuCount },
     { label: "External", value: "external", icon: <User className="w-4 h-4 text-gray-500" />, count: users.length - iitbhuCount },
+    { label: "Phone Verified", value: "verified", icon: <CheckCircle className="w-4 h-4 text-green-500" />, count: verifiedPhoneCount },
+    { label: "Phone Unverified", value: "unverified", icon: <Phone className="w-4 h-4 text-orange-500" />, count: users.length - verifiedPhoneCount },
     { label: "Suspended", value: "suspended", icon: <Ban className="w-4 h-4 text-red-500" />, count: suspendedCount },
   ];
 
-  const activeFiltersCount = (searchQuery ? 1 : 0) + (iitbhuFilter.length > 0 ? 1 : 0);
+  const paymentFilterOptions = [
+    { label: "Paid Users", value: "paid", icon: <CreditCard className="w-4 h-4 text-violet-500" />, count: paidCount },
+    { label: "Free Users", value: "free", icon: <User className="w-4 h-4 text-gray-500" />, count: users.length - paidCount },
+  ];
+
+  const activeFiltersCount = 
+    (searchQuery ? 1 : 0) + 
+    (statusFilter.length > 0 ? 1 : 0) + 
+    (paymentFilter.length > 0 ? 1 : 0) +
+    (sortKey ? 1 : 0);
 
   const handleResetFilters = () => {
-    setIitbhuFilter([]);
+    setStatusFilter([]);
+    setPaymentFilter([]);
     setSearchQuery("");
+    setSortKey(null);
+    setSortDirection(null);
     setPage(1);
   };
 
-  // Can current admin upgrade users?
   const canUpgrade = currentAdmin?.role === "MASTER_ADMIN" || currentAdmin?.role === "MANAGER";
 
-  const openUpgradeModal = (user: RegularUser) => {
-    setUpgradeModal({ isOpen: true, user });
-  };
-
-  const openSuspendModal = (user: RegularUser) => {
-    setSuspendModal({ isOpen: true, user });
-  };
-
-  const openReactivateModal = (user: RegularUser) => {
-    setReactivateModal({ isOpen: true, user });
-  };
+  const openUpgradeModal = (user: RegularUser) => setUpgradeModal({ isOpen: true, user });
+  const openSuspendModal = (user: RegularUser) => setSuspendModal({ isOpen: true, user });
+  const openReactivateModal = (user: RegularUser) => setReactivateModal({ isOpen: true, user });
 
   const handleUpgrade = (role: "MANAGER" | "OPERATOR") => {
     if (!upgradeModal.user) return;
     upgradeToAdmin(
       { targetEmail: upgradeModal.user.email, role },
-      {
-        onSuccess: () => {
-          setUpgradeModal({ isOpen: false, user: null });
-          refetch();
-        },
-      }
+      { onSuccess: () => { setUpgradeModal({ isOpen: false, user: null }); refetch(); } }
     );
   };
 
   const handleSuspend = (reason: string) => {
     if (!suspendModal.user) return;
-    suspendAccount(
-      suspendModal.user.email,
-      reason,
-      {
-        onSuccess: () => {
-          setSuspendModal({ isOpen: false, user: null });
-          refetch();
-        },
-      }
-    );
+    suspendAccount(suspendModal.user.email, reason, {
+      onSuccess: () => { setSuspendModal({ isOpen: false, user: null }); refetch(); }
+    });
   };
 
   const handleReactivate = (reason: string) => {
     if (!reactivateModal.user) return;
-    reactivateAccount(
-      reactivateModal.user.email,
-      reason,
-      {
-        onSuccess: () => {
-          setReactivateModal({ isOpen: false, user: null });
-          refetch();
-        },
-      }
-    );
+    reactivateAccount(reactivateModal.user.email, reason, {
+      onSuccess: () => { setReactivateModal({ isOpen: false, user: null }); refetch(); }
+    });
   };
 
   const formatDate = (dateString: string) => {
@@ -421,20 +472,20 @@ export default function UsersPage() {
 
   // Export to CSV
   const handleExport = () => {
-    const headers = ["Name", "Email", "Phone", "College", "KY ID", "IIT BHU", "Paid", "Joined"];
+    const headers = ["Name", "Email", "Phone", "KY ID", "College", "IIT BHU", "Paid", "Suspended", "Joined"];
     const rows = users.map((user) => [
       `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.slugName,
       user.email,
       user.phone || "",
-      user.college || "",
       user.kyId || "",
+      user.college || "",
       user.isFromIITBhu ? "Yes" : "No",
       user.isPaidUser ? "Yes" : "No",
+      user.isSuspended ? "Yes" : "No",
       formatDate(user.createdAt),
     ]);
 
     const csvContent = [headers, ...rows].map((row) => row.map((cell) => `"${cell}"`).join(",")).join("\n");
-
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -459,356 +510,393 @@ export default function UsersPage() {
                     <div className="flex items-center gap-3">
                       <div className="h-10 w-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
                         <Users2 className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
-                    </div>
-                    <div>
-                      <h1 className="text-2xl font-bold tracking-tight">Users</h1>
-                      <p className="text-muted-foreground text-sm">Manage registered users</p>
+                      </div>
+                      <div>
+                        <h1 className="text-2xl font-bold tracking-tight">Users</h1>
+                        <p className="text-muted-foreground text-sm">Manage registered users</p>
+                      </div>
                     </div>
                   </div>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={handleExport} disabled={isLoading || users.length === 0} className="gap-2">
+                      <Download className="w-4 h-4" />
+                      Export
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isLoading} className="gap-2">
+                      <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
+                      Refresh
+                    </Button>
+                  </div>
                 </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleExport}
-                    disabled={isLoading || users.length === 0}
-                    className="gap-2"
-                  >
-                    <Download className="w-4 h-4" />
-                    Export
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => refetch()}
-                    disabled={isLoading}
-                    className="gap-2"
-                  >
-                    <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
-                    Refresh
-                  </Button>
+
+                {/* Stats */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                  <StatCard
+                    title="Total Users"
+                    value={pagination.totalCount}
+                    icon={Users2}
+                    iconClassName="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                    isLoading={isLoading}
+                  />
+                  <StatCard
+                    title="IIT BHU Users"
+                    value={iitbhuCount}
+                    icon={Building2}
+                    iconClassName="bg-blue-500/10 text-blue-600 dark:text-blue-400"
+                    isLoading={isLoading}
+                  />
+                  <StatCard
+                    title="Paid Users"
+                    value={paidCount}
+                    icon={CreditCard}
+                    iconClassName="bg-violet-500/10 text-violet-600 dark:text-violet-400"
+                    isLoading={isLoading}
+                  />
+                  <StatCard
+                    title="Suspended"
+                    value={suspendedCount}
+                    icon={AlertCircle}
+                    iconClassName="bg-red-500/10 text-red-600 dark:text-red-400"
+                    isLoading={isLoading}
+                  />
                 </div>
-              </div>
 
-              {/* Stats */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-                <StatCard
-                  title="Total Users"
-                  value={pagination.totalCount}
-                  icon={Users2}
-                  iconClassName="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-                  isLoading={isLoading}
-                />
-                <StatCard
-                  title="IIT BHU Users"
-                  value={iitbhuCount}
-                  icon={Building2}
-                  iconClassName="bg-blue-500/10 text-blue-600 dark:text-blue-400"
-                  isLoading={isLoading}
-                />
-                <StatCard
-                  title="Paid Users"
-                  value={paidCount}
-                  icon={CreditCard}
-                  iconClassName="bg-violet-500/10 text-violet-600 dark:text-violet-400"
-                  isLoading={isLoading}
-                />
-                <StatCard
-                  title="Suspended"
-                  value={suspendedCount}
-                  icon={AlertCircle}
-                  iconClassName="bg-red-500/10 text-red-600 dark:text-red-400"
-                  isLoading={isLoading}
-                />
-              </div>
+                {/* Table */}
+                <Card>
+                  <CardContent className="p-0">
+                    {isLoading ? (
+                      <TableSkeleton />
+                    ) : isError ? (
+                      <DataTableEmpty
+                        icon={<XCircle className="w-8 h-8 text-red-500" />}
+                        title="Failed to load users"
+                        description="There was an error fetching the data. Please try again."
+                        action={
+                          <Button variant="outline" size="sm" onClick={() => refetch()} className="gap-2">
+                            <RefreshCw className="w-4 h-4" />
+                            Try Again
+                          </Button>
+                        }
+                      />
+                    ) : users.length === 0 && !debouncedSearch ? (
+                      <DataTableEmpty
+                        icon={<Users2 className="w-8 h-8 text-muted-foreground" />}
+                        title="No users yet"
+                        description="No users have registered yet."
+                      />
+                    ) : (
+                      <>
+                        {/* Toolbar */}
+                        <DataTableToolbar activeFiltersCount={activeFiltersCount} onResetFilters={handleResetFilters}>
+                          <DataTableSearch
+                            value={searchQuery}
+                            onChange={setSearchQuery}
+                            placeholder="Search by name, email, phone, or KY ID..."
+                          />
+                          <DataTableFilter
+                            title="Status"
+                            options={statusFilterOptions}
+                            selectedValues={statusFilter}
+                            onChange={setStatusFilter}
+                          />
+                          <DataTableFilter
+                            title="Payment"
+                            options={paymentFilterOptions}
+                            selectedValues={paymentFilter}
+                            onChange={setPaymentFilter}
+                          />
+                        </DataTableToolbar>
 
-              {/* Table */}
-              <Card>
-                <CardContent className="p-0">
-                  {isLoading ? (
-                    <TableSkeleton />
-                  ) : isError ? (
-                    <DataTableEmpty
-                      icon={<XCircle className="w-8 h-8 text-red-500" />}
-                      title="Failed to load users"
-                      description="There was an error fetching the data. Please try again."
-                      action={
-                        <Button variant="outline" size="sm" onClick={() => refetch()} className="gap-2">
-                          <RefreshCw className="w-4 h-4" />
-                          Try Again
-                        </Button>
-                      }
-                    />
-                  ) : users.length === 0 && !debouncedSearch ? (
-                    <DataTableEmpty
-                      icon={<Users2 className="w-8 h-8 text-muted-foreground" />}
-                      title="No users yet"
-                      description="No users have registered yet."
-                    />
-                  ) : (
-                    <>
-                      {/* Toolbar */}
-                      <DataTableToolbar activeFiltersCount={activeFiltersCount} onResetFilters={handleResetFilters}>
-                        <DataTableSearch
-                          value={searchQuery}
-                          onChange={setSearchQuery}
-                          placeholder="Search by name, email, or KY ID..."
-                        />
-                        <DataTableFilter
-                          title="Type"
-                          options={iitbhuFilterOptions}
-                          selectedValues={iitbhuFilter}
-                          onChange={setIitbhuFilter}
-                        />
-                      </DataTableToolbar>
-
-                      {/* Table content */}
-                      {filteredUsers.length === 0 ? (
-                        <DataTableEmpty
-                          icon={<Search className="w-8 h-8 text-muted-foreground" />}
-                          title="No results found"
-                          description="Try adjusting your search or filters to find what you're looking for."
-                          action={
-                            <Button variant="outline" size="sm" onClick={handleResetFilters}>
-                              Clear filters
-                            </Button>
-                          }
-                        />
-                      ) : (
-                        <div className="overflow-x-auto">
-                          <Table>
-                            <TableHeader>
-                              <TableRow className="hover:bg-transparent border-border/50">
-                                <TableHead className="min-w-[280px]">User</TableHead>
-                                <TableHead className="hidden md:table-cell min-w-[180px]">College</TableHead>
-                                <TableHead className="hidden lg:table-cell min-w-[140px]">Phone</TableHead>
-                                <TableHead className="min-w-[100px]">Status</TableHead>
-                                <TableHead className="hidden lg:table-cell min-w-[100px]">Joined</TableHead>
-                                <TableHead className="text-right min-w-[120px]">Actions</TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {filteredUsers.map((user) => (
-                                <TableRow key={user.id} className="group border-border/50">
-                                  <TableCell>
-                                    <div className="flex items-center gap-4">
-                                      <Avatar className="h-10 w-10 border border-border/50">
-                                        {user.googleAvatarUrl && (
-                                          <AvatarImage src={user.googleAvatarUrl} alt={user.slugName} />
+                        {/* Table content */}
+                        {filteredAndSortedUsers.length === 0 ? (
+                          <DataTableEmpty
+                            icon={<Search className="w-8 h-8 text-muted-foreground" />}
+                            title="No results found"
+                            description="Try adjusting your search or filters to find what you're looking for."
+                            action={
+                              <Button variant="outline" size="sm" onClick={handleResetFilters}>
+                                Clear filters
+                              </Button>
+                            }
+                          />
+                        ) : (
+                          <div className="overflow-x-auto">
+                            <Table>
+                              <TableHeader>
+                                <TableRow className="hover:bg-transparent border-border/50">
+                                  <TableHead className="min-w-[280px]">
+                                    <DataTableColumnHeader
+                                      label="User"
+                                      sortKey="name"
+                                      currentSortKey={sortKey}
+                                      currentSortDirection={sortDirection}
+                                      onSort={handleSort}
+                                    />
+                                  </TableHead>
+                                  <TableHead className="hidden md:table-cell min-w-[180px]">
+                                    <DataTableColumnHeader
+                                      label="College"
+                                      sortKey="college"
+                                      currentSortKey={sortKey}
+                                      currentSortDirection={sortDirection}
+                                      onSort={handleSort}
+                                    />
+                                  </TableHead>
+                                  <TableHead className="hidden lg:table-cell min-w-[140px]">
+                                    <DataTableColumnHeader
+                                      label="Phone"
+                                      sortKey="phone"
+                                      currentSortKey={sortKey}
+                                      currentSortDirection={sortDirection}
+                                      onSort={handleSort}
+                                    />
+                                  </TableHead>
+                                  <TableHead className="hidden xl:table-cell min-w-[130px]">
+                                    <DataTableColumnHeader
+                                      label="KY ID"
+                                      sortKey="kyId"
+                                      currentSortKey={sortKey}
+                                      currentSortDirection={sortDirection}
+                                      onSort={handleSort}
+                                    />
+                                  </TableHead>
+                                  <TableHead className="min-w-[100px]">Status</TableHead>
+                                  <TableHead className="hidden lg:table-cell min-w-[110px]">
+                                    <DataTableColumnHeader
+                                      label="Joined"
+                                      sortKey="createdAt"
+                                      currentSortKey={sortKey}
+                                      currentSortDirection={sortDirection}
+                                      onSort={handleSort}
+                                    />
+                                  </TableHead>
+                                  <TableHead className="text-right min-w-[120px]">Actions</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {filteredAndSortedUsers.map((user) => (
+                                  <TableRow key={user.id} className="group border-border/50">
+                                    <TableCell>
+                                      <div className="flex items-center gap-4">
+                                        <Avatar className="h-10 w-10 border border-border/50">
+                                          {user.googleAvatarUrl && (
+                                            <AvatarImage src={user.googleAvatarUrl} alt={user.slugName} />
+                                          )}
+                                          <AvatarFallback className="text-sm bg-muted font-medium">
+                                            {getInitials(user)}
+                                          </AvatarFallback>
+                                        </Avatar>
+                                        <div className="min-w-0">
+                                          <p className="font-medium text-foreground truncate">
+                                            {user.firstName || user.lastName
+                                              ? `${user.firstName || ""} ${user.lastName || ""}`.trim()
+                                              : user.slugName}
+                                          </p>
+                                          <p className="text-sm text-muted-foreground truncate">{user.email}</p>
+                                        </div>
+                                      </div>
+                                    </TableCell>
+                                    <TableCell className="hidden md:table-cell">
+                                      <p className="text-sm text-foreground/80 max-w-[200px] truncate">
+                                        {user.college || "—"}
+                                      </p>
+                                    </TableCell>
+                                    <TableCell className="hidden lg:table-cell">
+                                      <p className="text-sm text-foreground/80 font-mono">
+                                        {user.phone || <span className="text-muted-foreground italic">Not verified</span>}
+                                      </p>
+                                    </TableCell>
+                                    <TableCell className="hidden xl:table-cell">
+                                      <p className="text-sm text-foreground/80 font-mono">
+                                        {user.kyId || <span className="text-muted-foreground">—</span>}
+                                      </p>
+                                    </TableCell>
+                                    <TableCell>
+                                      <div className="flex flex-col gap-1">
+                                        {user.isSuspended && (
+                                          <Badge variant="destructive" className="gap-1 text-xs w-fit">
+                                            <Ban className="w-3 h-3" />
+                                            Suspended
+                                          </Badge>
                                         )}
-                                        <AvatarFallback className="text-sm bg-muted font-medium">
-                                          {getInitials(user)}
-                                        </AvatarFallback>
-                                      </Avatar>
-                                      <div className="min-w-0">
-                                        <p className="font-medium text-foreground truncate">
-                                          {user.firstName || user.lastName
-                                            ? `${user.firstName || ""} ${user.lastName || ""}`.trim()
-                                            : user.slugName}
-                                        </p>
-                                        <p className="text-sm text-muted-foreground truncate">{user.email}</p>
-                                        {user.kyId && (
-                                          <p className="text-xs text-muted-foreground font-mono">{user.kyId}</p>
+                                        {user.isFromIITBhu && (
+                                          <Badge variant="secondary" className="bg-blue-500/10 text-blue-600 dark:text-blue-400 border-0 gap-1 text-xs w-fit">
+                                            <Building2 className="w-3 h-3" />
+                                            IIT BHU
+                                          </Badge>
+                                        )}
+                                        {user.isPaidUser && (
+                                          <Badge variant="secondary" className="bg-violet-500/10 text-violet-600 dark:text-violet-400 border-0 gap-1 text-xs w-fit">
+                                            <CreditCard className="w-3 h-3" />
+                                            Paid
+                                          </Badge>
+                                        )}
+                                        {!user.isFromIITBhu && !user.isPaidUser && !user.isSuspended && (
+                                          <span className="text-xs text-muted-foreground">Free user</span>
                                         )}
                                       </div>
-                                    </div>
-                                  </TableCell>
-                                  <TableCell className="hidden md:table-cell">
-                                    <p className="text-sm text-foreground/80 max-w-[200px] truncate">
-                                      {user.college || "—"}
-                                    </p>
-                                  </TableCell>
-                                  <TableCell className="hidden lg:table-cell">
-                                    <p className="text-sm text-foreground/80 font-mono">
-                                      {user.phone || <span className="text-muted-foreground italic">Not verified</span>}
-                                    </p>
-                                  </TableCell>
-                                  <TableCell>
-                                    <div className="flex flex-col gap-1">
-                                      {user.isSuspended && (
-                                        <Badge variant="destructive" className="gap-1 text-xs w-fit">
-                                          <Ban className="w-3 h-3" />
-                                          Suspended
-                                        </Badge>
-                                      )}
-                                      {user.isFromIITBhu && (
-                                        <Badge variant="secondary" className="bg-blue-500/10 text-blue-600 dark:text-blue-400 border-0 gap-1 text-xs w-fit">
-                                          <Building2 className="w-3 h-3" />
-                                          IIT BHU
-                                        </Badge>
-                                      )}
-                                      {user.isPaidUser && (
-                                        <Badge variant="secondary" className="bg-violet-500/10 text-violet-600 dark:text-violet-400 border-0 gap-1 text-xs w-fit">
-                                          <CreditCard className="w-3 h-3" />
-                                          Paid
-                                        </Badge>
-                                      )}
-                                      {!user.isFromIITBhu && !user.isPaidUser && !user.isSuspended && (
-                                        <span className="text-xs text-muted-foreground">Free user</span>
-                                      )}
-                                    </div>
-                                  </TableCell>
-                                  <TableCell className="hidden lg:table-cell">
-                                    <p className="text-sm text-muted-foreground">{formatDate(user.createdAt)}</p>
-                                  </TableCell>
-                                  <TableCell className="text-right">
-                                    <div className="flex items-center justify-end gap-2">
-                                      {canUpgrade && !user.isSuspended && (
-                                        <Button
-                                          variant="outline"
-                                          size="sm"
-                                          onClick={() => openUpgradeModal(user)}
-                                          className="gap-1.5 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-500/10 dark:text-blue-400 border-border/50"
-                                        >
-                                          <UserCog className="w-4 h-4" />
-                                          <span className="hidden sm:inline">Upgrade</span>
-                                        </Button>
-                                      )}
-                                      {canUpgrade && !user.isSuspended && (
-                                        <Button
-                                          variant="outline"
-                                          size="sm"
-                                          onClick={() => openSuspendModal(user)}
-                                          className="gap-1.5 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-500/10 dark:text-red-400 border-border/50"
-                                        >
-                                          <Ban className="w-4 h-4" />
-                                          <span className="hidden sm:inline">Suspend</span>
-                                        </Button>
-                                      )}
-                                      {canUpgrade && user.isSuspended && (
-                                        <Button
-                                          variant="outline"
-                                          size="sm"
-                                          onClick={() => openReactivateModal(user)}
-                                          className="gap-1.5 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 dark:text-emerald-400 border-border/50"
-                                        >
-                                          <RefreshCw className="w-4 h-4" />
-                                          <span className="hidden sm:inline">Reactivate</span>
-                                        </Button>
-                                      )}
-                                      {isMasterAdmin && (
-                                        <Button
-                                          variant="outline"
-                                          size="sm"
-                                          onClick={() => invalidateUserCache(user.id)}
-                                          disabled={isInvalidatingCache}
-                                          className="gap-1.5 text-orange-600 hover:text-orange-700 hover:bg-orange-50 dark:hover:bg-orange-500/10 dark:text-orange-400 border-border/50"
-                                          title="Clear cached data for this user"
-                                        >
-                                          <Trash2 className="w-4 h-4" />
-                                          <span className="hidden sm:inline">Clear Cache</span>
-                                        </Button>
-                                      )}
-                                      {isMasterAdmin && (
-                                        <Button
-                                          variant="outline"
-                                          size="sm"
-                                          onClick={() => setTogglePaidModal({ isOpen: true, user })}
-                                          disabled={isTogglingPaidStatus}
-                                          className={`gap-1.5 border-border/50 ${
-                                            user.isPaidUser
-                                              ? "text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-500/10 dark:text-green-400"
-                                              : "text-gray-600 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-500/10 dark:text-gray-400"
-                                          }`}
-                                          title={user.isPaidUser ? "Mark as unpaid" : "Mark as paid"}
-                                        >
-                                          <DollarSign className="w-4 h-4" />
-                                          <span className="hidden sm:inline">{user.isPaidUser ? "Paid ✓" : "Mark Paid"}</span>
-                                        </Button>
-                                      )}
-                                    </div>
-                                  </TableCell>
-                                </TableRow>
-                              ))}
-                            </TableBody>
-                          </Table>
-                        </div>
-                      )}
-
-                      {/* Pagination */}
-                      {filteredUsers.length > 0 && (
-                        <div className="flex items-center justify-between px-4 py-4 border-t border-border/50">
-                          <p className="text-sm text-muted-foreground">
-                            Showing {((page - 1) * pagination.limit) + 1} to {Math.min(page * pagination.limit, pagination.totalCount)} of {pagination.totalCount} users
-                          </p>
-                          <div className="flex items-center gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => setPage((p) => Math.max(1, p - 1))}
-                              disabled={!pagination.hasPrevPage}
-                            >
-                              <ChevronLeft className="w-4 h-4" />
-                              Previous
-                            </Button>
-                            <span className="text-sm text-muted-foreground px-2">
-                              Page {page} of {pagination.totalPages}
-                            </span>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => setPage((p) => p + 1)}
-                              disabled={!pagination.hasNextPage}
-                            >
-                              Next
-                              <ChevronRight className="w-4 h-4" />
-                            </Button>
+                                    </TableCell>
+                                    <TableCell className="hidden lg:table-cell">
+                                      <p className="text-sm text-muted-foreground">{formatDate(user.createdAt)}</p>
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                      <div className="flex items-center justify-end gap-2">
+                                        {canUpgrade && !user.isSuspended && (
+                                          <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => openUpgradeModal(user)}
+                                            className="gap-1.5 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-500/10 dark:text-blue-400 border-border/50"
+                                          >
+                                            <UserCog className="w-4 h-4" />
+                                            <span className="hidden sm:inline">Upgrade</span>
+                                          </Button>
+                                        )}
+                                        {canUpgrade && !user.isSuspended && (
+                                          <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => openSuspendModal(user)}
+                                            className="gap-1.5 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-500/10 dark:text-red-400 border-border/50"
+                                          >
+                                            <Ban className="w-4 h-4" />
+                                            <span className="hidden sm:inline">Suspend</span>
+                                          </Button>
+                                        )}
+                                        {canUpgrade && user.isSuspended && (
+                                          <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => openReactivateModal(user)}
+                                            className="gap-1.5 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 dark:text-emerald-400 border-border/50"
+                                          >
+                                            <RefreshCw className="w-4 h-4" />
+                                            <span className="hidden sm:inline">Reactivate</span>
+                                          </Button>
+                                        )}
+                                        {isMasterAdmin && (
+                                          <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => invalidateUserCache(user.id)}
+                                            disabled={isInvalidatingCache}
+                                            className="gap-1.5 text-orange-600 hover:text-orange-700 hover:bg-orange-50 dark:hover:bg-orange-500/10 dark:text-orange-400 border-border/50"
+                                            title="Clear cached data for this user"
+                                          >
+                                            <Trash2 className="w-4 h-4" />
+                                            <span className="hidden sm:inline">Clear Cache</span>
+                                          </Button>
+                                        )}
+                                        {isMasterAdmin && (
+                                          <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => setTogglePaidModal({ isOpen: true, user })}
+                                            disabled={isTogglingPaidStatus}
+                                            className={`gap-1.5 border-border/50 ${
+                                              user.isPaidUser
+                                                ? "text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-500/10 dark:text-green-400"
+                                                : "text-gray-600 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-500/10 dark:text-gray-400"
+                                            }`}
+                                            title={user.isPaidUser ? "Mark as unpaid" : "Mark as paid"}
+                                          >
+                                            <DollarSign className="w-4 h-4" />
+                                            <span className="hidden sm:inline">{user.isPaidUser ? "Paid ✓" : "Mark Paid"}</span>
+                                          </Button>
+                                        )}
+                                      </div>
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
                           </div>
-                        </div>
-                      )}
-                    </>
-                  )}
-                </CardContent>
-              </Card>
-            </main>
+                        )}
+
+                        {/* Pagination */}
+                        {filteredAndSortedUsers.length > 0 && (
+                          <div className="flex items-center justify-between px-4 py-4 border-t border-border/50">
+                            <p className="text-sm text-muted-foreground">
+                              Showing {((page - 1) * pagination.limit) + 1} to {Math.min(page * pagination.limit, pagination.totalCount)} of {pagination.totalCount} users
+                            </p>
+                            <div className="flex items-center gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                                disabled={!pagination.hasPrevPage}
+                              >
+                                <ChevronLeft className="w-4 h-4" />
+                                Previous
+                              </Button>
+                              <span className="text-sm text-muted-foreground px-2">
+                                Page {page} of {pagination.totalPages}
+                              </span>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setPage((p) => p + 1)}
+                                disabled={!pagination.hasNextPage}
+                              >
+                                Next
+                                <ChevronRight className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </CardContent>
+                </Card>
+              </main>
+            </div>
           </div>
-        </div>
 
-        {/* Upgrade Modal */}
-        <UpgradeModal
-          isOpen={upgradeModal.isOpen}
-          onClose={() => setUpgradeModal({ isOpen: false, user: null })}
-          user={upgradeModal.user}
-          onUpgrade={handleUpgrade}
-          isPending={isUpgrading}
-          currentAdminRole={currentAdmin?.role}
-        />
+          {/* Upgrade Modal */}
+          <UpgradeModal
+            isOpen={upgradeModal.isOpen}
+            onClose={() => setUpgradeModal({ isOpen: false, user: null })}
+            user={upgradeModal.user}
+            onUpgrade={handleUpgrade}
+            isPending={isUpgrading}
+            currentAdminRole={currentAdmin?.role}
+          />
 
-        {/* Suspend Modal */}
-        <SuspendAccountModal
-          isOpen={suspendModal.isOpen}
-          onClose={() => setSuspendModal({ isOpen: false, user: null })}
-          user={suspendModal.user}
-          onSuspend={handleSuspend}
-          isPending={isChangingStatus}
-        />
+          {/* Suspend Modal */}
+          <SuspendAccountModal
+            isOpen={suspendModal.isOpen}
+            onClose={() => setSuspendModal({ isOpen: false, user: null })}
+            user={suspendModal.user}
+            onSuspend={handleSuspend}
+            isPending={isChangingStatus}
+          />
 
-        {/* Reactivate Modal */}
-        <ReactivateAccountModal
-          isOpen={reactivateModal.isOpen}
-          onClose={() => setReactivateModal({ isOpen: false, user: null })}
-          user={reactivateModal.user}
-          onReactivate={handleReactivate}
-          isPending={isChangingStatus}
-        />
+          {/* Reactivate Modal */}
+          <ReactivateAccountModal
+            isOpen={reactivateModal.isOpen}
+            onClose={() => setReactivateModal({ isOpen: false, user: null })}
+            user={reactivateModal.user}
+            onReactivate={handleReactivate}
+            isPending={isChangingStatus}
+          />
 
-        {/* Toggle Paid Status Modal */}
-        <TogglePaidStatusModal
-          isOpen={togglePaidModal.isOpen}
-          onClose={() => setTogglePaidModal({ isOpen: false, user: null })}
-          user={togglePaidModal.user}
-          onConfirm={() => {
-            if (togglePaidModal.user) {
-              toggleUserPaidStatus(togglePaidModal.user.id, {
-                onSuccess: () => {
-                  refetch();
-                  setTogglePaidModal({ isOpen: false, user: null });
-                },
-              });
-            }
-          }}
-          isPending={isTogglingPaidStatus}
-        />
+          {/* Toggle Paid Status Modal */}
+          <TogglePaidStatusModal
+            isOpen={togglePaidModal.isOpen}
+            onClose={() => setTogglePaidModal({ isOpen: false, user: null })}
+            user={togglePaidModal.user}
+            onConfirm={() => {
+              if (togglePaidModal.user) {
+                toggleUserPaidStatus(togglePaidModal.user.id, {
+                  onSuccess: () => {
+                    refetch();
+                    setTogglePaidModal({ isOpen: false, user: null });
+                  },
+                });
+              }
+            }}
+            isPending={isTogglingPaidStatus}
+          />
         </SidebarProvider>
       </RoleGuard>
     </AuthGuard>
