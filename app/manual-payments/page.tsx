@@ -550,193 +550,246 @@ function CreateRequestModal({ open, onClose, onSuccess }: CreateRequestModalProp
     );
   };
 
+  // Step completion status
+  const step1Complete = selectedUsers.length > 0;
+  const step2Complete = !!passType && (!isZonalPass || !!collegeSlug);
+  const step3Complete = !!paymentMethod && amount !== "" && parseFloat(amount) >= 0;
+  const step4Complete = bonafideFiles.length > 0;
+
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-white dark:bg-zinc-900">
-        <DialogHeader className="pb-4 border-b">
-          <DialogTitle className="text-xl flex items-center gap-2">
-            <div className="p-2 rounded-lg bg-primary/10">
-              <Plus className="h-5 w-5 text-primary" />
-            </div>
-            Create Manual Payment Request
-          </DialogTitle>
-          <DialogDescription className="text-muted-foreground">
-            Submit a bulk payment verification request for users who paid outside KonfHub.
-          </DialogDescription>
-        </DialogHeader>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-background p-0">
+        {/* Header */}
+        <div className="sticky top-0 z-10 bg-background border-b px-6 py-4">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-semibold">
+              Create Manual Payment Request
+            </DialogTitle>
+            <DialogDescription>
+              Submit a bulk payment verification for users who paid offline.
+            </DialogDescription>
+          </DialogHeader>
+        </div>
 
-        <div className="space-y-6 py-4">
+        <div className="px-6 py-4 space-y-6">
           {/* Step 1: User Lookup */}
-          <div className="space-y-3 p-4 rounded-lg bg-blue-50 dark:bg-blue-950/95 border border-blue-200 dark:border-blue-800">
-            <Label className="text-base font-semibold flex items-center gap-2 text-blue-700 dark:text-blue-300">
-              <Users className="h-4 w-4" />
-              1. Add Users by KY ID
-            </Label>
-            <div className="flex gap-2">
+          <div className="space-y-4">
+            <div className="flex items-center gap-3">
+              <div className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium ${
+                step1Complete 
+                  ? "bg-green-500 text-white" 
+                  : "bg-muted text-muted-foreground"
+              }`}>
+                {step1Complete ? <CheckCircle className="h-4 w-4" /> : "1"}
+              </div>
+              <div>
+                <h3 className="font-medium">Add Users</h3>
+                <p className="text-sm text-muted-foreground">Enter KY IDs to lookup users</p>
+              </div>
+            </div>
+            
+            <div className="ml-11 space-y-3">
               <Textarea
                 placeholder="Enter KY IDs (comma or newline separated)&#10;e.g. KY-2027-ABC123, KY-2027-XYZ789"
                 value={kyIdInput}
                 onChange={(e) => setKyIdInput(e.target.value)}
-                className="min-h-[80px] bg-white dark:bg-zinc-800"
+                className="min-h-[80px] resize-none"
               />
-            </div>
-            <Button 
-              variant="outline" 
-              onClick={handleLookup}
-              disabled={!kyIdInput.trim() || isLookingUp}
-              className="bg-white dark:bg-zinc-800 hover:bg-blue-50 dark:hover:bg-zinc-700"
-            >
-              {isLookingUp ? "Looking up..." : "Lookup Users"}
-            </Button>
+              <Button 
+                variant="secondary" 
+                size="sm"
+                onClick={handleLookup}
+                disabled={!kyIdInput.trim() || isLookingUp}
+              >
+                {isLookingUp ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    Looking up...
+                  </>
+                ) : (
+                  <>
+                    <Users className="h-4 w-4 mr-2" />
+                    Lookup Users
+                  </>
+                )}
+              </Button>
 
-            {/* Lookup Results */}
-            {lookupKyIds.length > 0 && !isLookingUp && (
-              <div className="rounded-lg border p-4 space-y-3 bg-white dark:bg-zinc-800">
-                <p className="text-sm font-medium">
-                  Found {lookedUpUsers.length} of {lookupKyIds.length} users
-                </p>
-                
-                {lookedUpUsers.length > 0 && (
-                  <div className="max-h-32 overflow-y-auto">
+              {/* Lookup Results */}
+              {lookupKyIds.length > 0 && !isLookingUp && (
+                <div className="rounded-lg border bg-muted/30 p-4 space-y-3">
+                  <p className="text-sm font-medium">
+                    Found {lookedUpUsers.length} of {lookupKyIds.length} users
+                  </p>
+                  
+                  {lookedUpUsers.length > 0 && (
+                    <div className="max-h-32 overflow-y-auto rounded border bg-background">
+                      <Table>
+                        <TableBody>
+                          {lookedUpUsers.map((user) => (
+                            <TableRow key={user.userId} className={user.isPaidUser ? "bg-amber-50 dark:bg-amber-950/30" : ""}>
+                              <TableCell className="font-mono text-xs py-2">{user.kyId}</TableCell>
+                              <TableCell className="text-sm py-2">{user.email}</TableCell>
+                              <TableCell className="py-2">
+                                {user.isPaidUser && (
+                                  <Badge variant="outline" className="text-amber-600 dark:text-amber-400 text-xs">
+                                    Already Paid
+                                  </Badge>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
+
+                  {notFound.length > 0 && (
+                    <p className="text-sm text-red-500">
+                      Not found: {notFound.join(", ")}
+                    </p>
+                  )}
+
+                  {lookedUpUsers.length > 0 && (
+                    <Button size="sm" onClick={handleAddUsers}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add {lookedUpUsers.length} User(s)
+                    </Button>
+                  )}
+                </div>
+              )}
+
+              {/* Selected Users */}
+              {selectedUsers.length > 0 && (
+                <div className="rounded-lg border p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-medium">
+                      Selected Users ({selectedUsers.length})
+                    </p>
+                    <Badge variant="secondary">{selectedUsers.length} selected</Badge>
+                  </div>
+                  <div className="max-h-32 overflow-y-auto rounded border bg-background">
                     <Table>
                       <TableBody>
-                        {lookedUpUsers.map((user) => (
-                          <TableRow key={user.userId} className={user.isPaidUser ? "bg-yellow-50 dark:bg-yellow-900/50" : ""}>
-                            <TableCell className="font-mono text-xs">{user.kyId}</TableCell>
-                            <TableCell className="text-sm">{user.email}</TableCell>
-                            <TableCell>
-                              {user.isPaidUser && (
-                                <Badge variant="outline" className="text-yellow-600 dark:text-yellow-400">Already Paid</Badge>
-                              )}
+                        {selectedUsers.map((user) => (
+                          <TableRow key={user.userId}>
+                            <TableCell className="font-mono text-xs py-2">{user.kyId}</TableCell>
+                            <TableCell className="text-sm py-2">{user.email}</TableCell>
+                            <TableCell className="py-2 w-8">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 w-6 p-0"
+                                onClick={() => handleRemoveUser(user.userId)}
+                              >
+                                <X className="h-3 w-3 text-muted-foreground hover:text-red-500" />
+                              </Button>
                             </TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
                     </Table>
                   </div>
-                )}
-
-                {notFound.length > 0 && (
-                  <p className="text-sm text-red-500">
-                    Not found: {notFound.join(", ")}
-                  </p>
-                )}
-
-                {lookedUpUsers.length > 0 && (
-                  <Button size="sm" onClick={handleAddUsers}>
-                    Add {lookedUpUsers.length} User(s) to Request
-                  </Button>
-                )}
-              </div>
-            )}
+                </div>
+              )}
+            </div>
           </div>
 
-          {/* Selected Users */}
-          {selectedUsers.length > 0 && (
-            <div className="space-y-3 p-4 rounded-lg bg-slate-50 dark:bg-slate-900/95 border border-slate-200 dark:border-slate-700">
-              <Label className="text-base font-semibold">
-                Selected Users ({selectedUsers.length})
-              </Label>
-              <div className="rounded-lg border max-h-40 overflow-y-auto bg-white dark:bg-zinc-800">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>KY ID</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {selectedUsers.map((user) => (
-                      <TableRow key={user.userId}>
-                        <TableCell className="font-mono text-xs">{user.kyId}</TableCell>
-                        <TableCell className="text-sm">{user.email}</TableCell>
-                        <TableCell>
-                          {user.isPaidUser ? (
-                            <Badge variant="outline" className="text-yellow-600">Paid</Badge>
-                          ) : (
-                            <Badge variant="outline" className="text-green-600">Unpaid</Badge>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleRemoveUser(user.userId)}
-                          >
-                            <XCircle className="h-4 w-4 text-red-500" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </div>
-          )}
+          <div className="border-t" />
 
           {/* Step 2: Select Pass Type */}
-          <div className="space-y-3 p-4 rounded-lg bg-purple-50 dark:bg-purple-950/95 border border-purple-200 dark:border-purple-800">
-            <Label className="text-base font-semibold flex items-center gap-2 text-purple-700 dark:text-purple-300">
-              <FileText className="h-4 w-4" />
-              2. Select Pass Type
-            </Label>
-            <div className="grid grid-cols-2 gap-3">
-              {Object.entries(MANUAL_PASS_TYPES).map(([key, config]) => (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => setPassType(key)}
-                  className={`p-3 rounded-lg border-2 text-left transition-all ${
-                    passType === key
-                      ? "border-purple-500 bg-purple-100 dark:bg-purple-900/50 ring-2 ring-purple-500/20"
-                      : "border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 hover:border-purple-300 dark:hover:border-purple-700"
-                  }`}
-                >
-                  <p className={`font-medium text-sm ${passType === key ? "text-purple-700 dark:text-purple-300" : ""}`}>
-                    {config.name}
-                  </p>
-                  <p className={`text-xs mt-0.5 ${
-                    passType === key 
-                      ? "text-purple-600 dark:text-purple-400" 
-                      : "text-muted-foreground"
-                  }`}>
-                    {config.benefits}
-                  </p>
-                </button>
-              ))}
+          <div className="space-y-4">
+            <div className="flex items-center gap-3">
+              <div className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium ${
+                step2Complete 
+                  ? "bg-green-500 text-white" 
+                  : "bg-muted text-muted-foreground"
+              }`}>
+                {step2Complete ? <CheckCircle className="h-4 w-4" /> : "2"}
+              </div>
+              <div>
+                <h3 className="font-medium">Select Pass Type</h3>
+                <p className="text-sm text-muted-foreground">Choose the pass to assign</p>
+              </div>
             </div>
             
-            {/* Zonal College Slug */}
-            {isZonalPass && (
-              <div className="space-y-2 pt-2 border-t border-purple-200 dark:border-purple-800">
-                <Label>College Slug *</Label>
-                <input
-                  type="text"
-                  value={collegeSlug}
-                  onChange={(e) => setCollegeSlug(e.target.value)}
-                  placeholder="e.g. rgipt"
-                  className="flex h-10 w-full max-w-xs rounded-md border border-input bg-white dark:bg-zinc-800 px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                />
+            <div className="ml-11 space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                {Object.entries(MANUAL_PASS_TYPES).map(([key, config]) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setPassType(key)}
+                    className={`group relative p-4 rounded-xl border-2 text-left transition-all duration-200 ${
+                      passType === key
+                        ? "border-primary bg-primary/5 shadow-sm"
+                        : "border-border hover:border-primary/50 hover:bg-muted/50"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="space-y-1">
+                        <p className={`font-semibold ${passType === key ? "text-primary" : "text-foreground"}`}>
+                          {config.name}
+                        </p>
+                        <p className="text-xs text-muted-foreground leading-relaxed">
+                          {config.benefits}
+                        </p>
+                      </div>
+                      <div className={`flex h-5 w-5 items-center justify-center rounded-full border-2 transition-colors ${
+                        passType === key 
+                          ? "border-primary bg-primary" 
+                          : "border-muted-foreground/30"
+                      }`}>
+                        {passType === key && (
+                          <CheckCircle className="h-3 w-3 text-primary-foreground" />
+                        )}
+                      </div>
+                    </div>
+                  </button>
+                ))}
               </div>
-            )}
+              
+              {/* Zonal College Slug */}
+              {isZonalPass && (
+                <div className="space-y-2 p-4 rounded-lg bg-muted/50 border">
+                  <Label className="text-sm font-medium">College Slug (Required for Zonal)</Label>
+                  <input
+                    type="text"
+                    value={collegeSlug}
+                    onChange={(e) => setCollegeSlug(e.target.value)}
+                    placeholder="e.g. rgipt, bhu, iitk"
+                    className="flex h-10 w-full max-w-xs rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  />
+                </div>
+              )}
+            </div>
           </div>
 
+          <div className="border-t" />
+
           {/* Step 3: Payment Details */}
-          <div className="space-y-3 p-4 rounded-lg bg-emerald-50 dark:bg-emerald-950/95 border border-emerald-200 dark:border-emerald-800">
-            <Label className="text-base font-semibold flex items-center gap-2 text-emerald-700 dark:text-emerald-300">
-              <IndianRupee className="h-4 w-4" />
-              3. Payment Details
-            </Label>
-            <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-4">
+            <div className="flex items-center gap-3">
+              <div className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium ${
+                step3Complete 
+                  ? "bg-green-500 text-white" 
+                  : "bg-muted text-muted-foreground"
+              }`}>
+                {step3Complete ? <CheckCircle className="h-4 w-4" /> : "3"}
+              </div>
+              <div>
+                <h3 className="font-medium">Payment Details</h3>
+                <p className="text-sm text-muted-foreground">Enter payment information</p>
+              </div>
+            </div>
+            
+            <div className="ml-11 grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Payment Method *</Label>
+                <Label className="text-sm">Payment Method</Label>
                 <Select value={paymentMethod} onValueChange={setPaymentMethod}>
-                  <SelectTrigger className="bg-white dark:bg-zinc-800">
-                    <SelectValue placeholder="Select method" />
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select method..." />
                   </SelectTrigger>
-                  <SelectContent className="bg-white dark:bg-zinc-800">
+                  <SelectContent>
                     {Object.entries(PAYMENT_METHODS).map(([key, label]) => (
                       <SelectItem key={key} value={key}>
                         {label}
@@ -747,162 +800,191 @@ function CreateRequestModal({ open, onClose, onSuccess }: CreateRequestModalProp
               </div>
 
               <div className="space-y-2">
-                <Label>Total Amount (₹) *</Label>
+                <Label className="text-sm">Total Amount</Label>
                 <div className="relative">
-                  <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">₹</span>
                   <input
                     type="text"
                     inputMode="decimal"
                     value={amount}
                     onChange={(e) => {
-                      // Allow only numbers and decimal point
                       const val = e.target.value;
                       if (val === "" || /^\d*\.?\d*$/.test(val)) {
                         setAmount(val);
                       }
                     }}
                     placeholder="0"
-                    className="flex h-10 w-full rounded-md border border-input bg-white dark:bg-zinc-800 pl-9 pr-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    className="flex h-10 w-full rounded-md border border-input bg-background pl-8 pr-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   />
                 </div>
+                {selectedUsers.length > 1 && amount && parseFloat(amount) > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    ₹{(parseFloat(amount) / selectedUsers.length).toFixed(2)} per user
+                  </p>
+                )}
               </div>
             </div>
           </div>
 
-          {/* Step 4: Bonafides (Proof Documents) */}
-          <div className="space-y-3 p-4 rounded-lg bg-amber-50 dark:bg-amber-950/95 border border-amber-200 dark:border-amber-800">
-            <Label className="text-base font-semibold flex items-center gap-2 text-amber-700 dark:text-amber-300">
-              <Upload className="h-4 w-4" />
-              4. Bonafides (Payment Proof)
-            </Label>
-            <p className="text-sm text-muted-foreground">
-              Upload payment screenshots, receipts, or bank statements. Max 2MB per file.
-            </p>
-            
-            {/* Upload Area */}
-            <div className="relative">
-              <input
-                type="file"
-                multiple
-                accept=".jpg,.jpeg,.png,.pdf"
-                onChange={handleBonafideFiles}
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-              />
-              <div className="border-2 border-dashed border-amber-300 dark:border-amber-600 rounded-lg p-6 text-center bg-white dark:bg-zinc-800 hover:border-amber-400 dark:hover:border-amber-500 transition-colors">
-                <Upload className="h-8 w-8 mx-auto mb-2 text-amber-500" />
-                <p className="text-sm font-medium">Click to upload or drag and drop</p>
-                <p className="text-xs text-muted-foreground mt-1">JPG, PNG, PDF (max 2MB each)</p>
+          <div className="border-t" />
+
+          {/* Step 4: Bonafides */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-3">
+              <div className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium ${
+                step4Complete 
+                  ? "bg-green-500 text-white" 
+                  : "bg-muted text-muted-foreground"
+              }`}>
+                {step4Complete ? <CheckCircle className="h-4 w-4" /> : "4"}
+              </div>
+              <div>
+                <h3 className="font-medium">Payment Proof</h3>
+                <p className="text-sm text-muted-foreground">Upload screenshots or receipts (max 2MB each)</p>
               </div>
             </div>
             
-            {/* Upload Error */}
-            {uploadError && (
-              <div className="flex items-center gap-2 text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/95 p-2 rounded">
-                <AlertCircle className="h-4 w-4" />
-                {uploadError}
+            <div className="ml-11 space-y-3">
+              {/* Upload Area */}
+              <div className="relative">
+                <input
+                  type="file"
+                  multiple
+                  accept=".jpg,.jpeg,.png,.pdf"
+                  onChange={handleBonafideFiles}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                />
+                <div className="border-2 border-dashed rounded-xl p-8 text-center hover:border-primary/50 hover:bg-muted/30 transition-colors">
+                  <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-3">
+                    <Upload className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                  <p className="text-sm font-medium">Click to upload or drag and drop</p>
+                  <p className="text-xs text-muted-foreground mt-1">JPG, PNG, PDF up to 2MB</p>
+                </div>
               </div>
-            )}
-            
-            {/* Uploaded Files List */}
-            {bonafideFiles.length > 0 && (
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-amber-700 dark:text-amber-300">
-                  Uploaded Files ({bonafideFiles.length})
-                </p>
-                <div className="space-y-1">
+              
+              {/* Upload Error */}
+              {uploadError && (
+                <div className="flex items-center gap-2 text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/50 p-3 rounded-lg border border-red-200 dark:border-red-900">
+                  <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                  {uploadError}
+                </div>
+              )}
+              
+              {/* Uploaded Files List */}
+              {bonafideFiles.length > 0 && (
+                <div className="space-y-2">
                   {bonafideFiles.map((file, index) => (
                     <div 
                       key={index} 
-                      className="flex items-center justify-between bg-white dark:bg-zinc-800 border rounded px-3 py-2"
+                      className="flex items-center justify-between bg-muted/50 border rounded-lg px-4 py-3"
                     >
-                      <div className="flex items-center gap-2 min-w-0">
-                        <FileText className="h-4 w-4 text-amber-600 flex-shrink-0" />
-                        <span className="text-sm truncate">{file.name}</span>
-                        <span className="text-xs text-muted-foreground flex-shrink-0">
-                          ({(file.size / 1024).toFixed(1)} KB)
-                        </span>
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-8 h-8 rounded-lg bg-background border flex items-center justify-center flex-shrink-0">
+                          <FileText className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium truncate">{file.name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {(file.size / 1024).toFixed(1)} KB
+                          </p>
+                        </div>
                       </div>
                       <Button
                         type="button"
                         variant="ghost"
                         size="sm"
                         onClick={() => handleRemoveBonafide(index)}
-                        className="h-6 w-6 p-0 hover:bg-red-100 dark:hover:bg-red-900/50"
+                        className="h-8 w-8 p-0 hover:bg-red-100 dark:hover:bg-red-900/30"
                       >
                         <X className="h-4 w-4 text-red-500" />
                       </Button>
                     </div>
                   ))}
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
+        </div>
 
-          {/* Summary */}
-          {isValid && (
-            <div className="rounded-lg border-2 border-green-200 dark:border-green-800 p-4 bg-green-50 dark:bg-green-950/95">
-              <p className="font-medium mb-2 flex items-center gap-2 text-green-700 dark:text-green-300">
-                <CheckCircle className="h-4 w-4" />
-                Request Summary
-              </p>
-              <div className="grid grid-cols-2 gap-2 text-sm">
-                <div>Users: <span className="font-medium">{selectedUsers.length}</span></div>
-                <div>Pass: <span className="font-medium">{MANUAL_PASS_TYPES[passType as keyof typeof MANUAL_PASS_TYPES]?.name}</span></div>
-                <div>Method: <span className="font-medium">{PAYMENT_METHODS[paymentMethod as keyof typeof PAYMENT_METHODS]}</span></div>
-                <div>Total: <span className="font-medium">₹{parseFloat(amount).toLocaleString("en-IN")}</span></div>
-                {bonafideFiles.length > 0 && (
-                  <div className="col-span-2">Bonafides: <span className="font-medium">{bonafideFiles.length} file(s)</span></div>
+        {/* Footer */}
+        <div className="sticky bottom-0 bg-background border-t px-6 py-4">
+          {/* Validation Summary */}
+          {!isValid && (
+            <div className="mb-4 p-3 rounded-lg bg-muted/50 border">
+              <p className="text-xs font-medium text-muted-foreground mb-2">Complete all steps to submit:</p>
+              <div className="flex flex-wrap gap-2">
+                {!step1Complete && (
+                  <Badge variant="outline" className="text-xs text-muted-foreground">
+                    Add users
+                  </Badge>
+                )}
+                {!step2Complete && (
+                  <Badge variant="outline" className="text-xs text-muted-foreground">
+                    Select pass
+                  </Badge>
+                )}
+                {!step3Complete && (
+                  <Badge variant="outline" className="text-xs text-muted-foreground">
+                    Enter payment details
+                  </Badge>
+                )}
+                {!step4Complete && (
+                  <Badge variant="outline" className="text-xs text-muted-foreground">
+                    Upload proof
+                  </Badge>
                 )}
               </div>
             </div>
           )}
-        </div>
 
-        <DialogFooter className="border-t pt-4 flex-col gap-3">
-          {/* Validation Errors */}
-          {!isValid && (
-            <div className="w-full text-sm text-red-500 dark:text-red-400 space-y-1">
-              {selectedUsers.length === 0 && (
-                <p className="flex items-center gap-1">
-                  <AlertCircle className="h-3 w-3" /> Add at least one user
-                </p>
-              )}
-              {!passType && (
-                <p className="flex items-center gap-1">
-                  <AlertCircle className="h-3 w-3" /> Select a pass type
-                </p>
-              )}
-              {!paymentMethod && (
-                <p className="flex items-center gap-1">
-                  <AlertCircle className="h-3 w-3" /> Select a payment method
-                </p>
-              )}
-              {(amount === "" || isNaN(parseFloat(amount)) || parseFloat(amount) < 0) && (
-                <p className="flex items-center gap-1">
-                  <AlertCircle className="h-3 w-3" /> Enter a valid amount
-                </p>
-              )}
-              {isZonalPass && !collegeSlug && (
-                <p className="flex items-center gap-1">
-                  <AlertCircle className="h-3 w-3" /> Enter college slug for zonal pass
-                </p>
-              )}
-              {bonafideFiles.length === 0 && (
-                <p className="flex items-center gap-1">
-                  <AlertCircle className="h-3 w-3" /> Upload at least one bonafide (payment proof)
-                </p>
-              )}
+          {/* Summary when valid */}
+          {isValid && (
+            <div className="mb-4 p-3 rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900">
+              <div className="flex items-center gap-2 mb-2">
+                <CheckCircle className="h-4 w-4 text-green-600" />
+                <p className="text-sm font-medium text-green-700 dark:text-green-400">Ready to submit</p>
+              </div>
+              <div className="grid grid-cols-4 gap-4 text-xs text-green-700 dark:text-green-400">
+                <div>
+                  <span className="text-green-600/70">Users:</span>{" "}
+                  <span className="font-medium">{selectedUsers.length}</span>
+                </div>
+                <div>
+                  <span className="text-green-600/70">Pass:</span>{" "}
+                  <span className="font-medium">{MANUAL_PASS_TYPES[passType as keyof typeof MANUAL_PASS_TYPES]?.name}</span>
+                </div>
+                <div>
+                  <span className="text-green-600/70">Amount:</span>{" "}
+                  <span className="font-medium">₹{parseFloat(amount).toLocaleString("en-IN")}</span>
+                </div>
+                <div>
+                  <span className="text-green-600/70">Files:</span>{" "}
+                  <span className="font-medium">{bonafideFiles.length}</span>
+                </div>
+              </div>
             </div>
           )}
-          <div className="flex gap-2 w-full justify-end">
+
+          <div className="flex gap-3 justify-end">
             <Button variant="outline" onClick={handleClose} disabled={isCreating}>
               Cancel
             </Button>
             <Button onClick={handleSubmit} disabled={!isValid || isCreating}>
-              {isCreating ? "Creating..." : "Submit Request"}
+              {isCreating ? (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                <>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Submit Request
+                </>
+              )}
             </Button>
           </div>
-        </DialogFooter>
+        </div>
       </DialogContent>
     </Dialog>
   );
