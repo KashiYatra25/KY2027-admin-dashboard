@@ -702,7 +702,7 @@ function CreateRequestModal({ open, onClose, onSuccess }: CreateRequestModalProp
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="!max-w-4xl max-h-[90vh] overflow-y-auto bg-background p-0">
+      <DialogContent className="!max-w-4xl max-h-[90vh] overflow-y-auto bg-background p-0 w-[95vw] sm:w-auto">
         {/* Loading Overlay */}
         {(isUploading || isCreating) && (
           <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm">
@@ -726,18 +726,18 @@ function CreateRequestModal({ open, onClose, onSuccess }: CreateRequestModalProp
         )}
 
         {/* Header */}
-        <div className="sticky top-0 z-10 bg-background border-b px-6 py-4">
+        <div className="sticky top-0 z-10 bg-background border-b px-4 sm:px-6 py-3 sm:py-4">
           <DialogHeader>
-            <DialogTitle className="text-xl font-semibold">
+            <DialogTitle className="text-lg sm:text-xl font-semibold">
               Create Manual Payment Request
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-xs sm:text-sm">
               Submit a bulk payment verification for users who paid offline.
             </DialogDescription>
           </DialogHeader>
         </div>
 
-        <div className="px-6 py-4 space-y-6">
+        <div className="px-4 sm:px-6 py-4 space-y-4 sm:space-y-6">
           {/* Step 1: User Lookup */}
           <div className="space-y-4">
             <div className="flex items-center gap-3">
@@ -754,7 +754,7 @@ function CreateRequestModal({ open, onClose, onSuccess }: CreateRequestModalProp
               </div>
             </div>
             
-            <div className="ml-11 space-y-3">
+            <div className="ml-0 sm:ml-11 space-y-3">
               <Textarea
                 placeholder="Enter KY IDs (comma or newline separated)&#10;e.g. KY-2027-ABC123, KY-2027-XYZ789"
                 value={kyIdInput}
@@ -878,35 +878,35 @@ function CreateRequestModal({ open, onClose, onSuccess }: CreateRequestModalProp
               </div>
             </div>
             
-            <div className="ml-11 space-y-4">
-              <div className="grid grid-cols-3 gap-3">
+            <div className="ml-0 sm:ml-11 space-y-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3">
                 {Object.entries(MANUAL_PASS_TYPES).map(([key, config]) => (
                   <button
                     key={key}
                     type="button"
                     onClick={() => setPassType(key)}
-                    className={`group relative p-4 rounded-xl border-2 text-left transition-all duration-200 ${
+                    className={`group relative p-3 sm:p-4 rounded-xl border-2 text-left transition-all duration-200 ${
                       passType === key
                         ? "border-primary bg-primary/5 shadow-sm"
                         : "border-border hover:border-primary/50 hover:bg-muted/50"
                     }`}
                   >
-                    <div className="flex items-start justify-between">
-                      <div className="space-y-1">
-                        <p className={`font-semibold ${passType === key ? "text-primary" : "text-foreground"}`}>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="space-y-0.5 sm:space-y-1 min-w-0 flex-1">
+                        <p className={`font-semibold text-sm sm:text-base truncate ${passType === key ? "text-primary" : "text-foreground"}`}>
                           {config.name}
                         </p>
-                        <p className="text-xs text-muted-foreground leading-relaxed">
+                        <p className="text-[10px] sm:text-xs text-muted-foreground leading-tight line-clamp-2">
                           {config.benefits}
                         </p>
                       </div>
-                      <div className={`flex h-5 w-5 items-center justify-center rounded-full border-2 transition-colors ${
+                      <div className={`flex-shrink-0 flex h-4 w-4 sm:h-5 sm:w-5 items-center justify-center rounded-full border-2 transition-colors ${
                         passType === key 
                           ? "border-primary bg-primary" 
                           : "border-muted-foreground/30"
                       }`}>
                         {passType === key && (
-                          <CheckCircle className="h-3 w-3 text-primary-foreground" />
+                          <CheckCircle className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-primary-foreground" />
                         )}
                       </div>
                     </div>
@@ -948,7 +948,7 @@ function CreateRequestModal({ open, onClose, onSuccess }: CreateRequestModalProp
               </div>
             </div>
             
-            <div className="ml-11 grid grid-cols-2 gap-4">
+            <div className="ml-0 sm:ml-11 grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label className="text-sm">Payment Method</Label>
                 <Select value={paymentMethod} onValueChange={setPaymentMethod}>
@@ -1010,7 +1010,7 @@ function CreateRequestModal({ open, onClose, onSuccess }: CreateRequestModalProp
               </div>
             </div>
             
-            <div className="ml-11 space-y-3">
+            <div className="ml-0 sm:ml-11 space-y-3">
               {/* Upload Area */}
               <div className="relative">
                 <input
@@ -1020,12 +1020,12 @@ function CreateRequestModal({ open, onClose, onSuccess }: CreateRequestModalProp
                   onChange={handleBonafideFiles}
                   className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                 />
-                <div className="border-2 border-dashed rounded-xl p-8 text-center hover:border-primary/50 hover:bg-muted/30 transition-colors">
-                  <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-3">
-                    <Upload className="h-5 w-5 text-muted-foreground" />
+                <div className="border-2 border-dashed rounded-xl p-4 sm:p-8 text-center hover:border-primary/50 hover:bg-muted/30 transition-colors">
+                  <div className="mx-auto w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-muted flex items-center justify-center mb-2 sm:mb-3">
+                    <Upload className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
                   </div>
-                  <p className="text-sm font-medium">Click to upload or drag and drop</p>
-                  <p className="text-xs text-muted-foreground mt-1">JPG, PNG, PDF up to 2MB</p>
+                  <p className="text-xs sm:text-sm font-medium">Click to upload or drag and drop</p>
+                  <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">JPG, PNG, PDF up to 2MB</p>
                 </div>
               </div>
               
@@ -1098,29 +1098,29 @@ function CreateRequestModal({ open, onClose, onSuccess }: CreateRequestModalProp
         </div>
 
         {/* Footer */}
-        <div className="sticky bottom-0 bg-background border-t px-6 py-4">
+        <div className="sticky bottom-0 bg-background border-t px-4 sm:px-6 py-3 sm:py-4">
           {/* Validation Summary */}
           {!isValid && (
-            <div className="mb-4 p-3 rounded-lg bg-muted/50 border">
-              <p className="text-xs font-medium text-muted-foreground mb-2">Complete all steps to submit:</p>
-              <div className="flex flex-wrap gap-2">
+            <div className="mb-3 sm:mb-4 p-2 sm:p-3 rounded-lg bg-muted/50 border">
+              <p className="text-[10px] sm:text-xs font-medium text-muted-foreground mb-1.5 sm:mb-2">Complete all steps to submit:</p>
+              <div className="flex flex-wrap gap-1.5 sm:gap-2">
                 {!step1Complete && (
-                  <Badge variant="outline" className="text-xs text-muted-foreground">
+                  <Badge variant="outline" className="text-[10px] sm:text-xs text-muted-foreground">
                     Add users
                   </Badge>
                 )}
                 {!step2Complete && (
-                  <Badge variant="outline" className="text-xs text-muted-foreground">
+                  <Badge variant="outline" className="text-[10px] sm:text-xs text-muted-foreground">
                     Select pass
                   </Badge>
                 )}
                 {!step3Complete && (
-                  <Badge variant="outline" className="text-xs text-muted-foreground">
-                    Enter payment details
+                  <Badge variant="outline" className="text-[10px] sm:text-xs text-muted-foreground">
+                    Payment details
                   </Badge>
                 )}
                 {!step4Complete && (
-                  <Badge variant="outline" className="text-xs text-muted-foreground">
+                  <Badge variant="outline" className="text-[10px] sm:text-xs text-muted-foreground">
                     Upload proof
                   </Badge>
                 )}
@@ -1130,12 +1130,12 @@ function CreateRequestModal({ open, onClose, onSuccess }: CreateRequestModalProp
 
           {/* Summary when valid */}
           {isValid && (
-            <div className="mb-4 p-3 rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900">
-              <div className="flex items-center gap-2 mb-2">
-                <CheckCircle className="h-4 w-4 text-green-600" />
-                <p className="text-sm font-medium text-green-700 dark:text-green-400">Ready to submit</p>
+            <div className="mb-3 sm:mb-4 p-2 sm:p-3 rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900">
+              <div className="flex items-center gap-2 mb-1.5 sm:mb-2">
+                <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 text-green-600" />
+                <p className="text-xs sm:text-sm font-medium text-green-700 dark:text-green-400">Ready to submit</p>
               </div>
-              <div className="grid grid-cols-4 gap-4 text-xs text-green-700 dark:text-green-400">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 text-[10px] sm:text-xs text-green-700 dark:text-green-400">
                 <div>
                   <span className="text-green-600/70">Users:</span>{" "}
                   <span className="font-medium">{selectedUsers.length}</span>
@@ -1156,25 +1156,28 @@ function CreateRequestModal({ open, onClose, onSuccess }: CreateRequestModalProp
             </div>
           )}
 
-          <div className="flex gap-3 justify-end">
-            <Button variant="outline" onClick={handleClose} disabled={isCreating || isUploading}>
+          <div className="flex gap-2 sm:gap-3 justify-end">
+            <Button variant="outline" size="sm" className="text-xs sm:text-sm" onClick={handleClose} disabled={isCreating || isUploading}>
               Cancel
             </Button>
-            <Button onClick={handleSubmit} disabled={!isValid || isCreating || isUploading}>
+            <Button size="sm" className="text-xs sm:text-sm" onClick={handleSubmit} disabled={!isValid || isCreating || isUploading}>
               {isUploading ? (
                 <>
-                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                  Uploading files...
+                  <RefreshCw className="h-3 w-3 sm:h-4 sm:w-4 mr-1.5 sm:mr-2 animate-spin" />
+                  <span className="hidden sm:inline">Uploading files...</span>
+                  <span className="sm:hidden">Uploading...</span>
                 </>
               ) : isCreating ? (
                 <>
-                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                  Creating request...
+                  <RefreshCw className="h-3 w-3 sm:h-4 sm:w-4 mr-1.5 sm:mr-2 animate-spin" />
+                  <span className="hidden sm:inline">Creating request...</span>
+                  <span className="sm:hidden">Creating...</span>
                 </>
               ) : (
                 <>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Submit Request
+                  <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+                  <span className="hidden sm:inline">Submit Request</span>
+                  <span className="sm:hidden">Submit</span>
                 </>
               )}
             </Button>
