@@ -222,6 +222,29 @@ function RequestDetailsModal({ request, open, onClose }: RequestDetailsModalProp
             </div>
           </div>
 
+          {/* Requestor Info */}
+          <div className="border-t pt-4">
+            <Label className="text-muted-foreground">Requested By</Label>
+            <div className="mt-2 p-3 rounded-lg bg-muted/50 border">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold">
+                  {request.requestedByName?.charAt(0)?.toUpperCase() || request.requestedBy.charAt(0).toUpperCase()}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium truncate">
+                    {request.requestedByName || "Unknown"}
+                  </p>
+                  <p className="text-sm text-muted-foreground truncate">{request.requestedBy}</p>
+                </div>
+                {request.requestedByRole && (
+                  <Badge variant="outline" className="text-xs">
+                    {request.requestedByRole.replace("_", " ")}
+                  </Badge>
+                )}
+              </div>
+            </div>
+          </div>
+
           {/* Users */}
           <div>
             <Label className="text-muted-foreground">Users ({request.users.length})</Label>
@@ -330,25 +353,64 @@ function RequestDetailsModal({ request, open, onClose }: RequestDetailsModalProp
             </Dialog>
           )}
 
-          {/* Processing Info */}
+          {/* Processing Info - Approved/Rejected */}
           {request.status !== "PENDING" && (
             <div className="border-t pt-4">
-              <Label className="text-muted-foreground">Processing Info</Label>
-              <div className="mt-2 grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">Processed By</p>
-                  <p className="font-medium">{request.processedBy || "-"}</p>
+              <Label className="text-muted-foreground">
+                {request.status === "APPROVED" ? "Approved By" : "Rejected By"}
+              </Label>
+              <div className="mt-2 p-3 rounded-lg border bg-muted/30">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className={`flex h-10 w-10 items-center justify-center rounded-full font-semibold ${
+                    request.status === "APPROVED" 
+                      ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" 
+                      : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                  }`}>
+                    {request.processedByName?.charAt(0)?.toUpperCase() || request.processedBy?.charAt(0)?.toUpperCase() || "?"}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium truncate">
+                      {request.processedByName || "Unknown"}
+                    </p>
+                    <p className="text-sm text-muted-foreground truncate">{request.processedBy || "-"}</p>
+                  </div>
+                  {request.processedByRole && (
+                    <Badge variant="outline" className="text-xs">
+                      {request.processedByRole.replace("_", " ")}
+                    </Badge>
+                  )}
                 </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Processed At</p>
-                  <p className="font-medium">
-                    {request.processedAt ? formatDate(request.processedAt) : "-"}
-                  </p>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <p className="text-muted-foreground">Processed At</p>
+                    <p className="font-medium">
+                      {request.processedAt ? formatDate(request.processedAt) : "-"}
+                    </p>
+                  </div>
                 </div>
+
+                {/* Show Note/Reason */}
                 {request.processNote && (
-                  <div className="col-span-2">
-                    <p className="text-sm text-muted-foreground">Note</p>
-                    <p className="font-medium">{request.processNote}</p>
+                  <div className={`mt-3 p-3 rounded-md ${
+                    request.status === "APPROVED" 
+                      ? "bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800" 
+                      : "bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800"
+                  }`}>
+                    <p className={`text-xs font-medium mb-1 ${
+                      request.status === "APPROVED" 
+                        ? "text-green-700 dark:text-green-400" 
+                        : "text-red-700 dark:text-red-400"
+                    }`}>
+                      {request.status === "APPROVED" ? "Approval Note" : "Rejection Reason"}
+                    </p>
+                    <p className={`text-sm ${
+                      request.status === "APPROVED" 
+                        ? "text-green-800 dark:text-green-300" 
+                        : "text-red-800 dark:text-red-300"
+                    }`}>
+                      {request.processNote}
+                    </p>
                   </div>
                 )}
               </div>

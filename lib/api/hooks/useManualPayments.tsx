@@ -23,6 +23,8 @@ export interface ManualPaymentUser {
 export interface ManualPaymentRequest {
   requestId: string;
   requestedBy: string;
+  requestedByName: string | null;
+  requestedByRole: "MASTER_ADMIN" | "MANAGER" | "OPERATOR" | null;
   users: ManualPaymentUser[];
   numberOfPasses: number;
   passType: ManualPassType;
@@ -32,6 +34,8 @@ export interface ManualPaymentRequest {
   bonafides: string[];
   status: RequestStatus;
   processedBy: string | null;
+  processedByName: string | null;
+  processedByRole: "MASTER_ADMIN" | "MANAGER" | "OPERATOR" | null;
   processedAt: string | null;
   processNote: string | null;
   createdAt: string;
