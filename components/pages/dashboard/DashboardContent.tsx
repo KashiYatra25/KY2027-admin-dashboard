@@ -195,8 +195,8 @@ export function DashboardContent() {
   const { admins, isLoading: isLoadingAdmins } = useAdminUsers();
   
   // Only fetch CA applications if MASTER_ADMIN or MANAGER
-  // For OPERATOR, we pass an empty array to avoid the API call
-  const { applications, isLoading: isLoadingCA } = useCAApplications();
+  // For OPERATOR, the query is disabled to avoid 403 errors
+  const { applications, isLoading: isLoadingCA } = useCAApplications({ enabled: canViewCA });
 
   // Admin counts (only relevant for MASTER_ADMIN)
   const totalAdmins = admins.length;

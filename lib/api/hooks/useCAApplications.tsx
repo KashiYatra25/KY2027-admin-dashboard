@@ -20,8 +20,17 @@ import type {
  *
  * Uses wire-axon `useApiQuery` so the request flows through the
  * admin `RefreshTokenStrategy` (access token attach + auto 401 refresh).
+ * 
+ * @param options.enabled - If false, skips the API call entirely. Useful for
+ *   roles (e.g., OPERATOR) that don't have access to CA endpoints.
  */
-export function useCAApplications() {
+interface UseCAApplicationsOptions {
+  enabled?: boolean;
+}
+
+export function useCAApplications(options?: UseCAApplicationsOptions) {
+  const enabled = options?.enabled ?? true;
+  
   const { data, isLoading, isError, error, refetch } =
     useApiQuery<CAApplicationsResponse>({
       queryKey: ["ca-applications"],
@@ -29,6 +38,7 @@ export function useCAApplications() {
       baseURL: BACKEND_URL,
       featureConfig: sharedFeatureConfig,
       queryOptions: {
+        enabled, // Skip query when disabled
         staleTime: 1000 * 60 * 5, // 5 minutes - data considered fresh
         gcTime: 1000 * 60 * 30, // 30 minutes - cache garbage collection
         retry: (failureCount, error: any) => {
@@ -46,7 +56,7 @@ export function useCAApplications() {
 
   return {
     applications,
-    isLoading,
+    isLoading: enabled ? isLoading : false, // Not loading if disabled
     isError,
     error,
     refetch: refetchApplications,
