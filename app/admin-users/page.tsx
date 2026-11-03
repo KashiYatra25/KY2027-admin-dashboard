@@ -293,6 +293,7 @@ interface ManageRoleModalProps {
   onDemoteToUser: () => void;
   isChangingRole: boolean;
   isDemotingToUser: boolean;
+  currentUserRole?: "MASTER_ADMIN" | "MANAGER" | "OPERATOR";
 }
 
 function ManageRoleModal({ 
@@ -303,10 +304,12 @@ function ManageRoleModal({
   onDemoteToUser,
   isChangingRole,
   isDemotingToUser,
+  currentUserRole,
 }: ManageRoleModalProps) {
   const [selectedAction, setSelectedAction] = useState<RoleAction | null>(null);
   const currentRole = admin?.role?.level;
   const isPending = isChangingRole || isDemotingToUser;
+  const isMasterAdmin = currentUserRole === "MASTER_ADMIN";
 
   // Reset selection when modal opens/closes
   const handleClose = () => {
@@ -320,10 +323,12 @@ function ManageRoleModal({
     ? `${admin.firstName || ""} ${admin.lastName || ""}`.trim()
     : admin.email?.split("@")[0] || "Unknown";
 
-  // Determine available actions based on current role
+  // Determine available actions based on current role AND the acting user's role
+  // MASTER_ADMIN can do all actions, MANAGER can only remove OPERATOR
   const availableActions: { action: RoleAction; label: string; description: string; targetRole: string; icon: React.ReactNode; variant: "default" | "destructive" | "outline" }[] = [];
 
-  if (currentRole === "OPERATOR") {
+  // Only MASTER_ADMIN can promote OPERATOR to MANAGER
+  if (isMasterAdmin && currentRole === "OPERATOR") {
     availableActions.push({
       action: "PROMOTE_TO_MANAGER",
       label: "Promote to Manager",
@@ -334,7 +339,8 @@ function ManageRoleModal({
     });
   }
 
-  if (currentRole === "MANAGER") {
+  // Only MASTER_ADMIN can demote MANAGER to OPERATOR
+  if (isMasterAdmin && currentRole === "MANAGER") {
     availableActions.push({
       action: "DEMOTE_TO_OPERATOR",
       label: "Demote to Operator",
@@ -345,8 +351,12 @@ function ManageRoleModal({
     });
   }
 
-  // Both MANAGER and OPERATOR can be demoted to USER
-  if (currentRole === "MANAGER" || currentRole === "OPERATOR") {
+  // MASTER_ADMIN can demote MANAGER or OPERATOR to USER
+  // MANAGER can only demote OPERATOR to USER
+  if (
+    (isMasterAdmin && (currentRole === "MANAGER" || currentRole === "OPERATOR")) ||
+    (currentUserRole === "MANAGER" && currentRole === "OPERATOR")
+  ) {
     availableActions.push({
       action: "DEMOTE_TO_USER",
       label: "Remove Admin Access",
@@ -883,7 +893,7 @@ export default function AdminUsersPage() {
                                     onSort={handleSort}
                                   />
                                 </TableHead>
-                                {isMasterAdmin && (
+                                {(isMasterAdmin || currentAdmin?.role === "MANAGER") && (
                                   <TableHead className="text-right min-w-[100px]">Actions</TableHead>
                                 )}
                               </TableRow>
@@ -933,34 +943,42 @@ export default function AdminUsersPage() {
                                     <TableCell className="hidden md:table-cell">
                                       <p className="text-sm text-muted-foreground">{formatDate(adminUser.createdAt)}</p>
                                     </TableCell>
-                                    {isMasterAdmin && (
+                                    {(isMasterAdmin || currentAdmin?.role === "MANAGER") && (
                                       <TableCell className="text-right">
                                         <div className="flex items-center justify-end gap-2">
-                                          {/* Change Role button - only for non-MASTER_ADMIN and non-self */}
+                                          {/* Manage Role button:
+                                              - MASTER_ADMIN can manage MANAGER and OPERATOR
+                                              - MANAGER can only manage (remove) OPERATOR */}
                                           {roleLevel !== "MASTER_ADMIN" && !isCurrentUser && (
+                                            // MASTER_ADMIN can manage any non-MASTER_ADMIN
+                                            // MANAGER can only manage OPERATOR
+                                            (isMasterAdmin || (currentAdmin?.role === "MANAGER" && roleLevel === "OPERATOR")) && (
+                                              <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => openManageRoleModal(adminUser)}
+                                                disabled={isChangingRole || isDemotingToUser}
+                                                className="gap-1.5 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-500/10 dark:text-blue-400 border-border/50"
+                                                title={isMasterAdmin ? "Manage role or remove admin access" : "Remove admin access"}
+                                              >
+                                                <ArrowUpDown className="w-4 h-4" />
+                                                <span className="hidden sm:inline">Manage Role</span>
+                                              </Button>
+                                            )
+                                          )}
+                                          {isMasterAdmin && (
                                             <Button
                                               variant="outline"
                                               size="sm"
-                                              onClick={() => openManageRoleModal(adminUser)}
-                                              disabled={isChangingRole || isDemotingToUser}
-                                              className="gap-1.5 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-500/10 dark:text-blue-400 border-border/50"
-                                              title="Manage role or remove admin access"
+                                              onClick={() => invalidateUserCache(adminUser.id)}
+                                              disabled={isInvalidatingCache}
+                                              className="gap-1.5 text-orange-600 hover:text-orange-700 hover:bg-orange-50 dark:hover:bg-orange-500/10 dark:text-orange-400 border-border/50"
+                                              title="Clear cached data for this admin"
                                             >
-                                              <ArrowUpDown className="w-4 h-4" />
-                                              <span className="hidden sm:inline">Manage Role</span>
+                                              <Trash2 className="w-4 h-4" />
+                                              <span className="hidden sm:inline">Clear Cache</span>
                                             </Button>
                                           )}
-                                          <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => invalidateUserCache(adminUser.id)}
-                                            disabled={isInvalidatingCache}
-                                            className="gap-1.5 text-orange-600 hover:text-orange-700 hover:bg-orange-50 dark:hover:bg-orange-500/10 dark:text-orange-400 border-border/50"
-                                            title="Clear cached data for this admin"
-                                          >
-                                            <Trash2 className="w-4 h-4" />
-                                            <span className="hidden sm:inline">Clear Cache</span>
-                                          </Button>
                                         </div>
                                       </TableCell>
                                     )}
@@ -1007,6 +1025,7 @@ export default function AdminUsersPage() {
           onDemoteToUser={handleDemoteToUser}
           isChangingRole={isChangingRole}
           isDemotingToUser={isDemotingToUser}
+          currentUserRole={currentAdmin?.role}
         />
         </SidebarProvider>
       </ManagerGuard>

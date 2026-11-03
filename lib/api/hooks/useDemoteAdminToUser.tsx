@@ -37,7 +37,8 @@ interface UseDemoteAdminToUserOptions {
 
 /**
  * Hook to demote an admin back to a regular user.
- * Only MASTER_ADMIN can use this.
+ * - MASTER_ADMIN can demote MANAGER or OPERATOR
+ * - MANAGER can demote OPERATOR only
  * Completely removes admin privileges and deletes the admin record.
  */
 export function useDemoteAdminToUser(options?: UseDemoteAdminToUserOptions) {
