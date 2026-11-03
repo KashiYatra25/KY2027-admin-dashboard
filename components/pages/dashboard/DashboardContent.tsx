@@ -184,22 +184,33 @@ function QuickActionsSkeleton() {
 
 export function DashboardContent() {
   const { session: admin } = useAdminSession();
+  
+  // Role checks
+  const isMasterAdmin = admin?.role === "MASTER_ADMIN";
+  const isManager = admin?.role === "MANAGER";
+  const canViewCA = isMasterAdmin || isManager;
+  const canViewAdminUsers = isMasterAdmin || isManager;
+  
+  // Only fetch admin users if MASTER_ADMIN
   const { admins, isLoading: isLoadingAdmins } = useAdminUsers();
+  
+  // Only fetch CA applications if MASTER_ADMIN or MANAGER
+  // For OPERATOR, we pass an empty array to avoid the API call
   const { applications, isLoading: isLoadingCA } = useCAApplications();
 
-  // Admin counts
+  // Admin counts (only relevant for MASTER_ADMIN)
   const totalAdmins = admins.length;
   const masterAdminCount = admins.filter(a => a.role?.level === "MASTER_ADMIN").length;
   const managerCount = admins.filter(a => a.role?.level === "MANAGER").length;
   const operatorCount = admins.filter(a => a.role?.level === "OPERATOR").length;
 
-  // CA Application counts
-  const pendingCA = applications.filter(app => app.status === "PENDING").length;
-  const acceptedCA = applications.filter(app => app.status === "ACCEPTED").length;
-  const totalCA = applications.length;
+  // CA Application counts (only show for MASTER_ADMIN and MANAGER)
+  const pendingCA = canViewCA ? applications.filter(app => app.status === "PENDING").length : 0;
+  const acceptedCA = canViewCA ? applications.filter(app => app.status === "ACCEPTED").length : 0;
+  const totalCA = canViewCA ? applications.length : 0;
   const acceptanceRate = totalCA > 0 ? Math.round((acceptedCA / totalCA) * 100) : 0;
 
-  const isLoading = isLoadingAdmins || isLoadingCA;
+  const isLoading = isLoadingAdmins || (canViewCA && isLoadingCA);
 
   const displayName = admin?.firstName || (admin?.email ? admin.email.split("@")[0] : "");
 
@@ -220,17 +231,19 @@ export function DashboardContent() {
             <Activity className="h-3 w-3" />
             Live
           </Badge>
-          <Link href="/campus-ambassadors">
-            <Button size="sm" className="gap-1.5">
-              View Applications
-              <ArrowUpRight className="h-3.5 w-3.5" />
-            </Button>
-          </Link>
+          {canViewCA && (
+            <Link href="/campus-ambassadors">
+              <Button size="sm" className="gap-1.5">
+                View Applications
+                <ArrowUpRight className="h-3.5 w-3.5" />
+              </Button>
+            </Link>
+          )}
         </div>
       </div>
 
       {/* Admin Stats - Only show to MASTER_ADMIN */}
-      {admin?.role === "MASTER_ADMIN" && (
+      {isMasterAdmin && (
         <section>
           <div className="flex items-center justify-between mb-4">
             <div>
@@ -279,43 +292,45 @@ export function DashboardContent() {
         </section>
       )}
 
-      {/* CA Applications */}
-      <section>
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h2 className="text-lg font-semibold">Campus Ambassador Program</h2>
-            <p className="text-sm text-muted-foreground">Application status overview</p>
+      {/* CA Applications - Only show to MASTER_ADMIN and MANAGER */}
+      {canViewCA && (
+        <section>
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-lg font-semibold">Campus Ambassador Program</h2>
+              <p className="text-sm text-muted-foreground">Application status overview</p>
+            </div>
           </div>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard
-            title="Total Applications"
-            value={totalCA}
-            subtitle="All time"
-            icon={GraduationCap}
-            isLoading={isLoadingCA}
-            href="/campus-ambassadors"
-          />
-          <StatCard
-            title="Pending Review"
-            value={pendingCA}
-            subtitle={pendingCA > 0 ? "Needs attention" : "All caught up!"}
-            icon={Clock}
-            iconClassName="bg-amber-500/10"
-            isLoading={isLoadingCA}
-            href="/campus-ambassadors"
-          />
-          <StatCard
-            title="Accepted"
-            value={acceptedCA}
-            icon={CheckCircle2}
-            iconClassName="bg-emerald-500/10"
-            isLoading={isLoadingCA}
-          />
-          <ProgressCard rate={acceptanceRate} isLoading={isLoadingCA} />
-        </div>
-      </section>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <StatCard
+              title="Total Applications"
+              value={totalCA}
+              subtitle="All time"
+              icon={GraduationCap}
+              isLoading={isLoadingCA}
+              href="/campus-ambassadors"
+            />
+            <StatCard
+              title="Pending Review"
+              value={pendingCA}
+              subtitle={pendingCA > 0 ? "Needs attention" : "All caught up!"}
+              icon={Clock}
+              iconClassName="bg-amber-500/10"
+              isLoading={isLoadingCA}
+              href="/campus-ambassadors"
+            />
+            <StatCard
+              title="Accepted"
+              value={acceptedCA}
+              icon={CheckCircle2}
+              iconClassName="bg-emerald-500/10"
+              isLoading={isLoadingCA}
+            />
+            <ProgressCard rate={acceptanceRate} isLoading={isLoadingCA} />
+          </div>
+        </section>
+      )}
 
       {/* Quick Actions */}
       <section>
@@ -329,21 +344,25 @@ export function DashboardContent() {
               <QuickActionsSkeleton />
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                <Link href="/campus-ambassadors" className="block">
-                  <Button 
-                    variant="outline" 
-                    className="h-auto py-4 px-4 justify-start w-full hover:bg-amber-500/5 hover:border-amber-500/30 transition-all group"
-                  >
-                    <div className="h-12 w-12 rounded-xl bg-amber-500/10 flex items-center justify-center mr-4 group-hover:bg-amber-500/20 transition-colors">
-                      <GraduationCap className="h-5 w-5 text-amber-600 dark:text-amber-400" />
-                    </div>
-                    <div className="text-left">
-                      <p className="font-medium">Review Applications</p>
-                      <p className="text-xs text-muted-foreground">{pendingCA} pending review</p>
-                    </div>
-                  </Button>
-                </Link>
-                {admin?.role === "MASTER_ADMIN" && (
+                {/* Review Applications - only for MASTER_ADMIN and MANAGER */}
+                {canViewCA && (
+                  <Link href="/campus-ambassadors" className="block">
+                    <Button 
+                      variant="outline" 
+                      className="h-auto py-4 px-4 justify-start w-full hover:bg-amber-500/5 hover:border-amber-500/30 transition-all group"
+                    >
+                      <div className="h-12 w-12 rounded-xl bg-amber-500/10 flex items-center justify-center mr-4 group-hover:bg-amber-500/20 transition-colors">
+                        <GraduationCap className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                      </div>
+                      <div className="text-left">
+                        <p className="font-medium">Review Applications</p>
+                        <p className="text-xs text-muted-foreground">{pendingCA} pending review</p>
+                      </div>
+                    </Button>
+                  </Link>
+                )}
+                {/* Manage Team - only for MASTER_ADMIN */}
+                {isMasterAdmin && (
                   <Link href="/admin-users" className="block">
                     <Button 
                       variant="outline" 
@@ -359,6 +378,7 @@ export function DashboardContent() {
                     </Button>
                   </Link>
                 )}
+                {/* Account Settings - everyone */}
                 <Link href="/settings" className="block">
                   <Button 
                     variant="outline" 
