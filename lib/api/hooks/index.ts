@@ -11,7 +11,7 @@ export { useChangeAdminRole, type ChangeAdminRoleResponse } from "./useChangeAdm
 export { useDemoteAdminToUser, type DemoteAdminToUserResponse } from "./useDemoteAdminToUser";
 
 // All Users hooks (regular users, not admins)
-export { useAllUsers, useUpgradeToAdmin, useChangeAccountStatus, type RegularUser, type PaginationInfo } from "./useAllUsers";
+export { useAllUsers, useUpgradeToAdmin, useChangeAccountStatus, type RegularUser, type PaginationInfo, type UserStats } from "./useAllUsers";
 
 // CA Application hooks
 export { useCAApplications, useApproveCA, useUpdateCAStatus } from "./useCAApplications";

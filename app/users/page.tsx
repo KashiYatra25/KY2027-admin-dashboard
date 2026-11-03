@@ -280,7 +280,7 @@ export default function UsersPage() {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  const { users, pagination, isLoading, isError, refetch } = useAllUsers({
+  const { users, pagination, stats, isLoading, isError, refetch } = useAllUsers({
     page,
     limit: 20,
     search: debouncedSearch,
@@ -389,25 +389,26 @@ export default function UsersPage() {
     return result;
   }, [users, statusFilter, paymentFilter, sortKey, sortDirection]);
 
-  // Stats (from current page)
-  const iitbhuCount = users.filter((u) => u.isFromIITBhu).length;
-  const paidCount = users.filter((u) => u.isPaidUser).length;
-  const suspendedCount = users.filter((u) => u.isSuspended).length;
-  const verifiedPhoneCount = users.filter((u) => u.phone).length;
-  const verifiedProfileCount = users.filter((u) => u.kyId).length;
+  // Stats (from API - global totals independent of pagination)
+  // We also compute current page stats for filter counts
+  const pageIitbhuCount = users.filter((u) => u.isFromIITBhu).length;
+  const pagePaidCount = users.filter((u) => u.isPaidUser).length;
+  const pageSuspendedCount = users.filter((u) => u.isSuspended).length;
+  const pageVerifiedPhoneCount = users.filter((u) => u.phone).length;
+  const pageVerifiedProfileCount = users.filter((u) => u.kyId).length;
 
-  // Filter options
+  // Filter options (use current page counts for context)
   const statusFilterOptions = [
-    { label: "IIT BHU", value: "iitbhu", icon: <Building2 className="w-4 h-4 text-blue-500" />, count: iitbhuCount },
-    { label: "External", value: "external", icon: <User className="w-4 h-4 text-gray-500" />, count: users.length - iitbhuCount },
-    { label: "Phone Verified", value: "verified", icon: <CheckCircle className="w-4 h-4 text-green-500" />, count: verifiedPhoneCount },
-    { label: "Phone Unverified", value: "unverified", icon: <Phone className="w-4 h-4 text-orange-500" />, count: users.length - verifiedPhoneCount },
-    { label: "Suspended", value: "suspended", icon: <Ban className="w-4 h-4 text-red-500" />, count: suspendedCount },
+    { label: "IIT BHU", value: "iitbhu", icon: <Building2 className="w-4 h-4 text-blue-500" />, count: pageIitbhuCount },
+    { label: "External", value: "external", icon: <User className="w-4 h-4 text-gray-500" />, count: users.length - pageIitbhuCount },
+    { label: "Phone Verified", value: "verified", icon: <CheckCircle className="w-4 h-4 text-green-500" />, count: pageVerifiedPhoneCount },
+    { label: "Phone Unverified", value: "unverified", icon: <Phone className="w-4 h-4 text-orange-500" />, count: users.length - pageVerifiedPhoneCount },
+    { label: "Suspended", value: "suspended", icon: <Ban className="w-4 h-4 text-red-500" />, count: pageSuspendedCount },
   ];
 
   const paymentFilterOptions = [
-    { label: "Paid Users", value: "paid", icon: <CreditCard className="w-4 h-4 text-violet-500" />, count: paidCount },
-    { label: "Free Users", value: "free", icon: <User className="w-4 h-4 text-gray-500" />, count: users.length - paidCount },
+    { label: "Paid Users", value: "paid", icon: <CreditCard className="w-4 h-4 text-violet-500" />, count: pagePaidCount },
+    { label: "Free Users", value: "free", icon: <User className="w-4 h-4 text-gray-500" />, count: users.length - pagePaidCount },
   ];
 
   const activeFiltersCount = 
@@ -534,35 +535,35 @@ export default function UsersPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
                   <StatCard
                     title="Total Users"
-                    value={pagination.totalCount}
+                    value={stats.totalUsers}
                     icon={Users2}
                     iconClassName="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
                     isLoading={isLoading}
                   />
                   <StatCard
                     title="IIT BHU Users"
-                    value={iitbhuCount}
+                    value={stats.iitbhuUsers}
                     icon={Building2}
                     iconClassName="bg-blue-500/10 text-blue-600 dark:text-blue-400"
                     isLoading={isLoading}
                   />
                   <StatCard
                     title="Verified Profiles"
-                    value={verifiedProfileCount}
+                    value={stats.verifiedProfiles}
                     icon={IdCard}
                     iconClassName="bg-green-500/10 text-green-600 dark:text-green-400"
                     isLoading={isLoading}
                   />
                   <StatCard
                     title="Paid Users"
-                    value={paidCount}
+                    value={stats.paidUsers}
                     icon={CreditCard}
                     iconClassName="bg-violet-500/10 text-violet-600 dark:text-violet-400"
                     isLoading={isLoading}
                   />
                   <StatCard
                     title="Suspended"
-                    value={suspendedCount}
+                    value={stats.suspendedUsers}
                     icon={AlertCircle}
                     iconClassName="bg-red-500/10 text-red-600 dark:text-red-400"
                     isLoading={isLoading}

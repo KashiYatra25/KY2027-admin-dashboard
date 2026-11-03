@@ -38,10 +38,19 @@ export interface PaginationInfo {
   hasPrevPage: boolean;
 }
 
+export interface UserStats {
+  totalUsers: number;
+  iitbhuUsers: number;
+  paidUsers: number;
+  suspendedUsers: number;
+  verifiedProfiles: number;
+}
+
 interface AllUsersResponse {
   info: string;
   users: RegularUser[];
   pagination: PaginationInfo;
+  stats: UserStats;
 }
 
 interface UpgradeToAdminResponse {
@@ -125,12 +134,20 @@ export function useAllUsers(options?: UseAllUsersOptions) {
     hasNextPage: false,
     hasPrevPage: false,
   };
+  const stats: UserStats = data?.stats ?? {
+    totalUsers: 0,
+    iitbhuUsers: 0,
+    paidUsers: 0,
+    suspendedUsers: 0,
+    verifiedProfiles: 0,
+  };
 
   const refetchUsers = useCallback(() => refetch(), [refetch]);
 
   return {
     users,
     pagination,
+    stats,
     isLoading,
     isError,
     error,
