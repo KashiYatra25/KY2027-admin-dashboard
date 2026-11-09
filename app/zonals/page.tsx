@@ -437,19 +437,27 @@ export default function ZonalsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedRegistration, setSelectedRegistration] = useState<ZonalRegistration | null>(null);
 
-  // Convert filter arrays to single values for API
-  const passTypeValue = passTypeFilter.length === 1 ? passTypeFilter[0] as ZonalPassType : "";
-  const paymentStatusValue = paymentStatusFilter.length === 1 ? paymentStatusFilter[0] as ZonalPaymentStatus : "";
-
+  // Pass arrays directly to the hook for multi-select server-side filtering
   const { registrations, pagination, stats, collegeBreakdown, isLoading, isError, refetch } = useZonalRegistrations({
     page,
     limit: 20,
-    passType: passTypeValue,
-    paymentStatus: paymentStatusValue,
+    passType: passTypeFilter as ZonalPassType[],
+    paymentStatus: paymentStatusFilter as ZonalPaymentStatus[],
     search: searchQuery,
   });
 
   const activeFiltersCount = (passTypeFilter.length > 0 ? 1 : 0) + (paymentStatusFilter.length > 0 ? 1 : 0);
+
+  // Handle filter changes - reset page to 1 when filters change
+  const handlePassTypeFilterChange = (values: string[]) => {
+    setPassTypeFilter(values);
+    setPage(1);
+  };
+
+  const handlePaymentStatusFilterChange = (values: string[]) => {
+    setPaymentStatusFilter(values);
+    setPage(1);
+  };
 
   const handleResetFilters = () => {
     setPassTypeFilter([]);
@@ -695,13 +703,13 @@ export default function ZonalsPage() {
                                 title="Pass Type"
                                 options={passTypeFilterOptions}
                                 selectedValues={passTypeFilter}
-                                onChange={setPassTypeFilter}
+                                onChange={handlePassTypeFilterChange}
                               />
                               <DataTableFilter
                                 title="Payment"
                                 options={paymentStatusFilterOptions}
                                 selectedValues={paymentStatusFilter}
-                                onChange={setPaymentStatusFilter}
+                                onChange={handlePaymentStatusFilterChange}
                               />
                             </DataTableToolbar>
 

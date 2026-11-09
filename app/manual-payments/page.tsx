@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { SidebarProvider } from "@/hooks";
 import { AuthGuard } from "@/components/auth";
 import { Sidebar } from "@/components/layout/Sidebar";
@@ -179,7 +179,7 @@ function RequestDetailsModal({ request, open, onClose }: RequestDetailsModalProp
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto bg-white dark:bg-zinc-900">
+      <DialogContent className="w-full sm:max-w-2xl max-h-[80vh] overflow-y-auto bg-white dark:bg-zinc-900">
         <DialogHeader>
           <DialogTitle>Request Details - {request.requestId}</DialogTitle>
           <DialogDescription>
@@ -764,7 +764,7 @@ function CreateRequestModal({ open, onClose, onSuccess }: CreateRequestModalProp
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="!max-w-4xl max-h-[90vh] overflow-y-auto bg-background p-0 w-[95vw] sm:w-auto">
+      <DialogContent className="w-[95vw] !max-w-5xl max-h-[90vh] overflow-y-auto bg-background p-0 sm:w-full">
         {/* Loading Overlay */}
         {(isUploading || isCreating) && (
           <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm">
@@ -799,9 +799,14 @@ function CreateRequestModal({ open, onClose, onSuccess }: CreateRequestModalProp
           </DialogHeader>
         </div>
 
-        <div className="px-4 sm:px-6 py-4 space-y-4 sm:space-y-6">
-          {/* Step 1: User Lookup */}
-          <div className="space-y-4">
+        {/* Body: two-column layout on large screens.
+            LEFT  = Step 1 (Add Users) — the data-heavy part gets its own column.
+            RIGHT = Steps 2–4 (Pass, Payment, Proof) stacked. */}
+        <div className="grid grid-cols-1 gap-x-8 gap-y-8 px-4 py-4 sm:px-6 sm:py-6 lg:grid-cols-2">
+          {/* ─────────────── LEFT COLUMN ─────────────── */}
+          <section className="space-y-4 lg:border-r lg:border-border lg:pr-8">
+            {/* Step 1: User Lookup */}
+            <div className="space-y-4">
             <div className="flex items-center gap-3">
               <div className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium ${
                 step1Complete 
@@ -920,12 +925,13 @@ function CreateRequestModal({ open, onClose, onSuccess }: CreateRequestModalProp
                 </div>
               )}
             </div>
-          </div>
+            </div>
+          </section>
 
-          <div className="border-t" />
-
-          {/* Step 2: Select Pass Type */}
-          <div className="space-y-4">
+          {/* ─────────────── RIGHT COLUMN ─────────────── */}
+          <section className="space-y-6">
+            {/* Step 2: Select Pass Type */}
+            <div className="space-y-4">
             <div className="flex items-center gap-3">
               <div className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium ${
                 step2Complete 
@@ -941,7 +947,7 @@ function CreateRequestModal({ open, onClose, onSuccess }: CreateRequestModalProp
             </div>
             
             <div className="ml-0 sm:ml-11 space-y-4">
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3">
+              <div className="grid grid-cols-2 gap-2 sm:gap-3">
                 {Object.entries(MANUAL_PASS_TYPES).map(([key, config]) => (
                   <button
                     key={key}
@@ -955,10 +961,10 @@ function CreateRequestModal({ open, onClose, onSuccess }: CreateRequestModalProp
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="space-y-0.5 sm:space-y-1 min-w-0 flex-1">
-                        <p className={`font-semibold text-sm sm:text-base truncate ${passType === key ? "text-primary" : "text-foreground"}`}>
+                        <p className={`font-semibold text-sm sm:text-base ${passType === key ? "text-primary" : "text-foreground"}`}>
                           {config.name}
                         </p>
-                        <p className="text-[10px] sm:text-xs text-muted-foreground leading-tight line-clamp-2">
+                        <p className="text-xs text-muted-foreground leading-snug">
                           {config.benefits}
                         </p>
                       </div>
@@ -1101,7 +1107,7 @@ function CreateRequestModal({ open, onClose, onSuccess }: CreateRequestModalProp
               
               {/* Uploaded Files List with Preview */}
               {bonafideFiles.length > 0 && (
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                <div className="grid grid-cols-2 gap-3">
                   {bonafideFiles.map((file, index) => {
                     const isImage = file.type.startsWith("image/");
                     const previewUrl = isImage ? URL.createObjectURL(file) : null;
@@ -1157,6 +1163,7 @@ function CreateRequestModal({ open, onClose, onSuccess }: CreateRequestModalProp
               )}
             </div>
           </div>
+          </section>
         </div>
 
         {/* Footer */}
@@ -1271,6 +1278,7 @@ function ManualPaymentsPageInner() {
   const {
     requests: allRequests,
     pagination: allPagination,
+    stats: allStats,
     isLoading: isLoadingAll,
     isError: isErrorAll,
     refetch: refetchAll,
@@ -1284,6 +1292,7 @@ function ManualPaymentsPageInner() {
   const {
     requests: myRequests,
     pagination: myPagination,
+    stats: myStats,
     isLoading: isLoadingMy,
     isError: isErrorMy,
     refetch: refetchMy,
@@ -1299,6 +1308,9 @@ function ManualPaymentsPageInner() {
   const isLoading = viewMode === "all" ? isLoadingAll : isLoadingMy;
   const isError = viewMode === "all" ? isErrorAll : isErrorMy;
   const refetch = viewMode === "all" ? refetchAll : refetchMy;
+  
+  // Use server-side stats (computed across ALL data, not just current page)
+  const stats = viewMode === "all" ? allStats : myStats;
 
   // Modals
   const [selectedRequest, setSelectedRequest] = useState<ManualPaymentRequest | null>(null);
@@ -1310,15 +1322,6 @@ function ManualPaymentsPageInner() {
   // Mutations
   const { approveRequest, isPending: isApproving } = useApproveManualPayment();
   const { rejectRequest, isPending: isRejecting } = useRejectManualPayment();
-
-  // Stats
-  const stats = useMemo(() => {
-    const pending = requests.filter((r) => r.status === "PENDING").length;
-    const approved = requests.filter((r) => r.status === "APPROVED").length;
-    const rejected = requests.filter((r) => r.status === "REJECTED").length;
-    const totalAmount = requests.reduce((sum, r) => sum + r.amount, 0);
-    return { pending, approved, rejected, totalAmount };
-  }, [requests]);
 
   const handleViewDetails = (request: ManualPaymentRequest) => {
     setSelectedRequest(request);

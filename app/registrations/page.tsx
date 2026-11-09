@@ -337,18 +337,26 @@ export default function RegistrationsPage() {
   const [typeFilter, setTypeFilter] = useState<string[]>([]);
   const [selectedRegistration, setSelectedRegistration] = useState<Registration | null>(null);
 
-  // Convert filter arrays to single values for API
-  const statusValue = statusFilter.length === 1 ? statusFilter[0] as RegistrationStatus : "";
-  const typeValue = typeFilter.length === 1 ? typeFilter[0] as ParticipationType : "";
-
+  // Pass arrays directly to the hook for multi-select server-side filtering
   const { registrations, pagination, stats, isLoading, isError, refetch } = useRegistrations({
     page,
     limit: 20,
-    status: statusValue,
-    participationType: typeValue,
+    status: statusFilter as RegistrationStatus[],
+    participationType: typeFilter as ParticipationType[],
   });
 
   const activeFiltersCount = (statusFilter.length > 0 ? 1 : 0) + (typeFilter.length > 0 ? 1 : 0);
+
+  // Handle filter changes - reset page to 1 when filters change
+  const handleStatusFilterChange = (values: string[]) => {
+    setStatusFilter(values);
+    setPage(1);
+  };
+
+  const handleTypeFilterChange = (values: string[]) => {
+    setTypeFilter(values);
+    setPage(1);
+  };
 
   const handleResetFilters = () => {
     setStatusFilter([]);
@@ -551,13 +559,13 @@ export default function RegistrationsPage() {
                             title="Status"
                             options={statusFilterOptions}
                             selectedValues={statusFilter}
-                            onChange={setStatusFilter}
+                            onChange={handleStatusFilterChange}
                           />
                           <DataTableFilter
                             title="Type"
                             options={typeFilterOptions}
                             selectedValues={typeFilter}
-                            onChange={setTypeFilter}
+                            onChange={handleTypeFilterChange}
                           />
                         </DataTableToolbar>
 

@@ -29,13 +29,14 @@ interface UseRegistrationsOptions {
   page?: number;
   limit?: number;
   eventSlug?: string;
-  status?: RegistrationStatus | "";
-  participationType?: ParticipationType | "";
+  status?: RegistrationStatus | RegistrationStatus[] | "";
+  participationType?: ParticipationType | ParticipationType[] | "";
 }
 
 /**
  * Hook to fetch all event registrations with pagination and filters.
  * 
+ * Supports multi-select filters (pass arrays for status/participationType).
  * Uses wire-axon `useApiQuery` so the request flows through the
  * admin `RefreshTokenStrategy` (access token attach + auto 401 refresh).
  */
@@ -49,16 +50,23 @@ export function useRegistrations(options: UseRegistrationsOptions = {}) {
   if (eventSlug) {
     params.set("eventSlug", eventSlug);
   }
+  // Support arrays for multi-select (send as comma-separated)
   if (status) {
-    params.set("status", status);
+    const statusValue = Array.isArray(status) ? status.join(",") : status;
+    if (statusValue) params.set("status", statusValue);
   }
   if (participationType) {
-    params.set("participationType", participationType);
+    const typeValue = Array.isArray(participationType) ? participationType.join(",") : participationType;
+    if (typeValue) params.set("participationType", typeValue);
   }
+
+  // Build query key with stringified arrays for proper caching
+  const statusKey = Array.isArray(status) ? status.sort().join(",") : status;
+  const typeKey = Array.isArray(participationType) ? participationType.sort().join(",") : participationType;
 
   const { data, isLoading, isError, error, refetch } =
     useApiQuery<RegistrationsResponse>({
-      queryKey: ["admin-registrations", String(page), String(limit), eventSlug, status, participationType],
+      queryKey: ["admin-registrations", String(page), String(limit), eventSlug, statusKey, typeKey],
       url: `/admin/registrations?${params.toString()}`,
       baseURL: BACKEND_URL,
       featureConfig: sharedFeatureConfig,
@@ -66,8 +74,8 @@ export function useRegistrations(options: UseRegistrationsOptions = {}) {
         staleTime: 1000 * 60 * 2, // 2 minutes - data considered fresh
         gcTime: 1000 * 60 * 15, // 15 minutes - cache garbage collection
         retry: (failureCount, error: any) => {
-          const status = error?.response?.status ?? error?.status;
-          if (status === 401 || status === 403 || status === 429) return false;
+          const statusCode = error?.response?.status ?? error?.status;
+          if (statusCode === 401 || statusCode === 403 || statusCode === 429) return false;
           return failureCount < 3;
         },
       },

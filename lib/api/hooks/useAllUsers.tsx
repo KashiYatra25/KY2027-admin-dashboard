@@ -41,9 +41,13 @@ export interface PaginationInfo {
 export interface UserStats {
   totalUsers: number;
   iitbhuUsers: number;
+  externalUsers: number;
   paidUsers: number;
+  freeUsers: number;
   suspendedUsers: number;
   verifiedProfiles: number;
+  phoneVerified: number;
+  phoneUnverified: number;
 }
 
 interface AllUsersResponse {
@@ -77,6 +81,13 @@ const ChangeAccountStatusSchema = z.object({
 });
 
 // ═══════════════════════════════════════════════════════════════════
+// SORT TYPES
+// ═══════════════════════════════════════════════════════════════════
+
+export type UserSortField = "createdAt" | "firstName" | "email" | "college" | "kyId";
+export type SortDirection = "asc" | "desc";
+
+// ═══════════════════════════════════════════════════════════════════
 // HOOKS
 // ═══════════════════════════════════════════════════════════════════
 
@@ -84,20 +95,32 @@ interface UseAllUsersOptions {
   page?: number;
   limit?: number;
   search?: string;
+  // Server-side filters
+  isFromIITBhu?: boolean;
+  isPaidUser?: boolean;
+  isSuspended?: boolean;
+  hasPhone?: boolean;
+  // Server-side sorting
+  sortBy?: UserSortField;
+  sortDir?: SortDirection;
 }
 
 /**
- * Hook to fetch all regular users (paginated).
+ * Hook to fetch all regular users (paginated with server-side filters).
  * Only fetches users with role "USER" (not admins).
  * 
- * QueryKey structure: ["all-users", "page:X", "limit:Y", "search:Z"]
- * Using "all-users" as base allows invalidateQueryName: "all-users" to work
- * via prefix matching (invalidates all keys starting with "all-users").
+ * Filters and sorting are applied server-side for accurate pagination.
  */
 export function useAllUsers(options?: UseAllUsersOptions) {
   const page = options?.page ?? 1;
   const limit = options?.limit ?? 20;
   const search = options?.search ?? "";
+  const isFromIITBhu = options?.isFromIITBhu;
+  const isPaidUser = options?.isPaidUser;
+  const isSuspended = options?.isSuspended;
+  const hasPhone = options?.hasPhone;
+  const sortBy = options?.sortBy ?? "createdAt";
+  const sortDir = options?.sortDir ?? "desc";
 
   // Build query params
   const queryParams = new URLSearchParams();
@@ -106,11 +129,38 @@ export function useAllUsers(options?: UseAllUsersOptions) {
   if (search) {
     queryParams.set("search", search);
   }
+  // Add filters (only when explicitly set)
+  if (isFromIITBhu !== undefined) {
+    queryParams.set("isFromIITBhu", String(isFromIITBhu));
+  }
+  if (isPaidUser !== undefined) {
+    queryParams.set("isPaidUser", String(isPaidUser));
+  }
+  if (isSuspended !== undefined) {
+    queryParams.set("isSuspended", String(isSuspended));
+  }
+  if (hasPhone !== undefined) {
+    queryParams.set("hasPhone", String(hasPhone));
+  }
+  // Add sorting
+  queryParams.set("sortBy", sortBy);
+  queryParams.set("sortDir", sortDir);
 
   const { data, isLoading, isError, error, refetch } =
     useApiQuery<AllUsersResponse>({
-      // Base key first for prefix-based invalidation
-      queryKey: ["all-users", `page:${page}`, `limit:${limit}`, `search:${search}`],
+      // Query key includes all parameters for proper caching/invalidation
+      queryKey: [
+        "all-users",
+        `page:${page}`,
+        `limit:${limit}`,
+        `search:${search}`,
+        `iitbhu:${isFromIITBhu ?? "any"}`,
+        `paid:${isPaidUser ?? "any"}`,
+        `suspended:${isSuspended ?? "any"}`,
+        `hasPhone:${hasPhone ?? "any"}`,
+        `sortBy:${sortBy}`,
+        `sortDir:${sortDir}`,
+      ],
       url: `/admin/get-all-users?${queryParams.toString()}`,
       baseURL: BACKEND_URL,
       featureConfig: sharedFeatureConfig,
@@ -137,9 +187,13 @@ export function useAllUsers(options?: UseAllUsersOptions) {
   const stats: UserStats = data?.stats ?? {
     totalUsers: 0,
     iitbhuUsers: 0,
+    externalUsers: 0,
     paidUsers: 0,
+    freeUsers: 0,
     suspendedUsers: 0,
     verifiedProfiles: 0,
+    phoneVerified: 0,
+    phoneUnverified: 0,
   };
 
   const refetchUsers = useCallback(() => refetch(), [refetch]);

@@ -30,14 +30,15 @@ interface UseZonalRegistrationsOptions {
   page?: number;
   limit?: number;
   collegeSlug?: string;
-  passType?: ZonalPassType | "";
-  paymentStatus?: ZonalPaymentStatus | "";
+  passType?: ZonalPassType | ZonalPassType[] | "";
+  paymentStatus?: ZonalPaymentStatus | ZonalPaymentStatus[] | "";
   search?: string;
 }
 
 /**
  * Hook to fetch all zonal registrations/passes with pagination and filters.
  * 
+ * Supports multi-select filters (pass arrays for passType/paymentStatus).
  * Uses wire-axon `useApiQuery` so the request flows through the
  * admin `RefreshTokenStrategy` (access token attach + auto 401 refresh).
  */
@@ -58,19 +59,26 @@ export function useZonalRegistrations(options: UseZonalRegistrationsOptions = {}
   if (collegeSlug) {
     params.set("collegeSlug", collegeSlug);
   }
+  // Support arrays for multi-select (send as comma-separated)
   if (passType) {
-    params.set("passType", passType);
+    const passTypeValue = Array.isArray(passType) ? passType.join(",") : passType;
+    if (passTypeValue) params.set("passType", passTypeValue);
   }
   if (paymentStatus) {
-    params.set("paymentStatus", paymentStatus);
+    const statusValue = Array.isArray(paymentStatus) ? paymentStatus.join(",") : paymentStatus;
+    if (statusValue) params.set("paymentStatus", statusValue);
   }
   if (search) {
     params.set("search", search);
   }
 
+  // Build query key with stringified arrays for proper caching
+  const passTypeKey = Array.isArray(passType) ? passType.sort().join(",") : passType;
+  const statusKey = Array.isArray(paymentStatus) ? paymentStatus.sort().join(",") : paymentStatus;
+
   const { data, isLoading, isError, error, refetch } =
     useApiQuery<ZonalRegistrationsResponse>({
-      queryKey: ["admin-zonal-registrations", String(page), String(limit), collegeSlug, passType, paymentStatus, search],
+      queryKey: ["admin-zonal-registrations", String(page), String(limit), collegeSlug, passTypeKey, statusKey, search],
       url: `/admin/zonals/registrations?${params.toString()}`,
       baseURL: BACKEND_URL,
       featureConfig: sharedFeatureConfig,
@@ -78,8 +86,8 @@ export function useZonalRegistrations(options: UseZonalRegistrationsOptions = {}
         staleTime: 1000 * 60 * 2, // 2 minutes - data considered fresh
         gcTime: 1000 * 60 * 15, // 15 minutes - cache garbage collection
         retry: (failureCount, error: any) => {
-          const status = error?.response?.status ?? error?.status;
-          if (status === 401 || status === 403 || status === 429) return false;
+          const statusCode = error?.response?.status ?? error?.status;
+          if (statusCode === 401 || statusCode === 403 || statusCode === 429) return false;
           return failureCount < 3;
         },
       },

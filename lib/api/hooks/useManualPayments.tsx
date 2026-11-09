@@ -76,6 +76,14 @@ export interface ManualPaymentRequestsResponse {
     totalPages: number;
     hasMore: boolean;
   };
+  stats: {
+    pending: number;
+    approved: number;
+    rejected: number;
+    total: number;
+    totalAmount: number;
+    approvedAmount: number;
+  };
 }
 
 export interface CreateManualPaymentResponse {
@@ -219,6 +227,7 @@ export function useManualPaymentRequests(params?: UseManualPaymentRequestsParams
   return {
     requests: data?.requests ?? [],
     pagination: data?.pagination ?? { page: 1, limit: 20, totalCount: 0, totalPages: 0, hasMore: false },
+    stats: data?.stats ?? { pending: 0, approved: 0, rejected: 0, total: 0, totalAmount: 0, approvedAmount: 0 },
     isLoading,
     isError,
     error,
@@ -262,6 +271,7 @@ export function useMyPaymentRequests(params?: UseManualPaymentRequestsParams) {
   return {
     requests: data?.requests ?? [],
     pagination: data?.pagination ?? { page: 1, limit: 20, totalCount: 0, totalPages: 0, hasMore: false },
+    stats: data?.stats ?? { pending: 0, approved: 0, rejected: 0, total: 0, totalAmount: 0, approvedAmount: 0 },
     isLoading,
     isError,
     error,

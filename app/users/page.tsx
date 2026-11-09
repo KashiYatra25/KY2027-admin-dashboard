@@ -263,13 +263,15 @@ export default function UsersPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   
-  // Filter states
-  const [statusFilter, setStatusFilter] = useState<string[]>([]);
-  const [paymentFilter, setPaymentFilter] = useState<string[]>([]);
+  // Filter states - now server-side
+  const [isFromIITBhuFilter, setIsFromIITBhuFilter] = useState<boolean | undefined>(undefined);
+  const [isPaidUserFilter, setIsPaidUserFilter] = useState<boolean | undefined>(undefined);
+  const [isSuspendedFilter, setIsSuspendedFilter] = useState<boolean | undefined>(undefined);
+  const [hasPhoneFilter, setHasPhoneFilter] = useState<boolean | undefined>(undefined);
   
-  // Sort state (client-side sorting for current page)
-  const [sortKey, setSortKey] = useState<string | null>(null);
-  const [sortDirection, setSortDirection] = useState<SortDirection>(null);
+  // Sort state - now server-side
+  const [sortKey, setSortKey] = useState<string | null>("createdAt");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
 
   // Debounce search
   useEffect(() => {
@@ -280,10 +282,28 @@ export default function UsersPage() {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
+  // Map sortKey to server-side field name
+  const getSortByField = (key: string | null): "createdAt" | "firstName" | "email" | "college" | "kyId" => {
+    switch (key) {
+      case "name": return "firstName";
+      case "email": return "email";
+      case "college": return "college";
+      case "kyId": return "kyId";
+      case "createdAt":
+      default: return "createdAt";
+    }
+  };
+
   const { users, pagination, stats, isLoading, isError, refetch } = useAllUsers({
     page,
     limit: 20,
     search: debouncedSearch,
+    isFromIITBhu: isFromIITBhuFilter,
+    isPaidUser: isPaidUserFilter,
+    isSuspended: isSuspendedFilter,
+    hasPhone: hasPhoneFilter,
+    sortBy: getSortByField(sortKey),
+    sortDir: sortDirection === "asc" ? "asc" : "desc",
   });
 
   const { upgradeToAdmin, isPending: isUpgrading } = useUpgradeToAdmin();
@@ -298,131 +318,97 @@ export default function UsersPage() {
   const [reactivateModal, setReactivateModal] = useState<{ isOpen: boolean; user: RegularUser | null }>({ isOpen: false, user: null });
   const [togglePaidModal, setTogglePaidModal] = useState<{ isOpen: boolean; user: RegularUser | null }>({ isOpen: false, user: null });
 
-  // Handle sort toggle
+  // Handle sort toggle - reset page on change
   const handleSort = (key: string) => {
     if (sortKey === key) {
       if (sortDirection === "asc") {
         setSortDirection("desc");
       } else if (sortDirection === "desc") {
-        setSortKey(null);
-        setSortDirection(null);
+        setSortKey("createdAt");
+        setSortDirection("desc");
       }
     } else {
       setSortKey(key);
       setSortDirection("asc");
     }
+    setPage(1);
   };
 
-  // Filter and sort users (client-side for current page)
-  const filteredAndSortedUsers = useMemo(() => {
-    let result = [...users];
-    
-    // Apply status filter
-    if (statusFilter.length > 0) {
-      result = result.filter((user) => {
-        if (statusFilter.includes("iitbhu") && user.isFromIITBhu) return true;
-        if (statusFilter.includes("external") && !user.isFromIITBhu) return true;
-        if (statusFilter.includes("suspended") && user.isSuspended) return true;
-        if (statusFilter.includes("verified") && user.phone) return true;
-        if (statusFilter.includes("unverified") && !user.phone) return true;
-        return false;
-      });
-    }
-    
-    // Apply payment filter
-    if (paymentFilter.length > 0) {
-      result = result.filter((user) => {
-        if (paymentFilter.includes("paid") && user.isPaidUser) return true;
-        if (paymentFilter.includes("free") && !user.isPaidUser) return true;
-        return false;
-      });
-    }
-    
-    // Apply sorting
-    if (sortKey && sortDirection) {
-      result.sort((a, b) => {
-        let aVal: string | number | null = null;
-        let bVal: string | number | null = null;
-        
-        switch (sortKey) {
-          case "name":
-            aVal = `${a.firstName || ""} ${a.lastName || ""}`.trim().toLowerCase() || a.slugName.toLowerCase();
-            bVal = `${b.firstName || ""} ${b.lastName || ""}`.trim().toLowerCase() || b.slugName.toLowerCase();
-            break;
-          case "email":
-            aVal = a.email.toLowerCase();
-            bVal = b.email.toLowerCase();
-            break;
-          case "college":
-            aVal = (a.college || "").toLowerCase();
-            bVal = (b.college || "").toLowerCase();
-            break;
-          case "phone":
-            aVal = a.phone || "";
-            bVal = b.phone || "";
-            break;
-          case "kyId":
-            aVal = a.kyId || "";
-            bVal = b.kyId || "";
-            break;
-          case "createdAt":
-            aVal = new Date(a.createdAt).getTime();
-            bVal = new Date(b.createdAt).getTime();
-            break;
-          default:
-            return 0;
-        }
-        
-        if (aVal === null || aVal === "") return sortDirection === "asc" ? 1 : -1;
-        if (bVal === null || bVal === "") return sortDirection === "asc" ? -1 : 1;
-        
-        if (typeof aVal === "string" && typeof bVal === "string") {
-          return sortDirection === "asc" ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
-        }
-        if (typeof aVal === "number" && typeof bVal === "number") {
-          return sortDirection === "asc" ? aVal - bVal : bVal - aVal;
-        }
-        return 0;
-      });
-    }
-    
-    return result;
-  }, [users, statusFilter, paymentFilter, sortKey, sortDirection]);
+  // Derive filter selections from state for the UI
+  const statusFilter = useMemo(() => {
+    const selected: string[] = [];
+    if (isFromIITBhuFilter === true) selected.push("iitbhu");
+    if (isFromIITBhuFilter === false) selected.push("external");
+    if (isSuspendedFilter === true) selected.push("suspended");
+    if (hasPhoneFilter === true) selected.push("verified");
+    if (hasPhoneFilter === false) selected.push("unverified");
+    return selected;
+  }, [isFromIITBhuFilter, isSuspendedFilter, hasPhoneFilter]);
 
-  // Stats (from API - global totals independent of pagination)
-  // We also compute current page stats for filter counts
-  const pageIitbhuCount = users.filter((u) => u.isFromIITBhu).length;
-  const pagePaidCount = users.filter((u) => u.isPaidUser).length;
-  const pageSuspendedCount = users.filter((u) => u.isSuspended).length;
-  const pageVerifiedPhoneCount = users.filter((u) => u.phone).length;
-  const pageVerifiedProfileCount = users.filter((u) => u.kyId).length;
+  const paymentFilter = useMemo(() => {
+    if (isPaidUserFilter === true) return ["paid"];
+    if (isPaidUserFilter === false) return ["free"];
+    return [];
+  }, [isPaidUserFilter]);
 
-  // Filter options (use current page counts for context)
+  // Handle filter changes - reset page to 1
+  const handleStatusFilterChange = (selected: string[]) => {
+    // Reset all first
+    setIsFromIITBhuFilter(undefined);
+    setIsSuspendedFilter(undefined);
+    setHasPhoneFilter(undefined);
+    
+    // Apply selected filters
+    if (selected.includes("iitbhu")) setIsFromIITBhuFilter(true);
+    else if (selected.includes("external")) setIsFromIITBhuFilter(false);
+    
+    if (selected.includes("suspended")) setIsSuspendedFilter(true);
+    
+    if (selected.includes("verified")) setHasPhoneFilter(true);
+    else if (selected.includes("unverified")) setHasPhoneFilter(false);
+    
+    setPage(1);
+  };
+
+  const handlePaymentFilterChange = (selected: string[]) => {
+    if (selected.length === 0) {
+      setIsPaidUserFilter(undefined);
+    } else if (selected.includes("paid")) {
+      setIsPaidUserFilter(true);
+    } else if (selected.includes("free")) {
+      setIsPaidUserFilter(false);
+    }
+    setPage(1);
+  };
+
+  // Filter options with global counts from server stats
   const statusFilterOptions = [
-    { label: "IIT BHU", value: "iitbhu", icon: <Building2 className="w-4 h-4 text-blue-500" />, count: pageIitbhuCount },
-    { label: "External", value: "external", icon: <User className="w-4 h-4 text-gray-500" />, count: users.length - pageIitbhuCount },
-    { label: "Phone Verified", value: "verified", icon: <CheckCircle className="w-4 h-4 text-green-500" />, count: pageVerifiedPhoneCount },
-    { label: "Phone Unverified", value: "unverified", icon: <Phone className="w-4 h-4 text-orange-500" />, count: users.length - pageVerifiedPhoneCount },
-    { label: "Suspended", value: "suspended", icon: <Ban className="w-4 h-4 text-red-500" />, count: pageSuspendedCount },
+    { label: "IIT BHU", value: "iitbhu", icon: <Building2 className="w-4 h-4 text-blue-500" />, count: stats.iitbhuUsers },
+    { label: "External", value: "external", icon: <User className="w-4 h-4 text-gray-500" />, count: stats.externalUsers },
+    { label: "Phone Verified", value: "verified", icon: <CheckCircle className="w-4 h-4 text-green-500" />, count: stats.phoneVerified },
+    { label: "Phone Unverified", value: "unverified", icon: <Phone className="w-4 h-4 text-orange-500" />, count: stats.phoneUnverified },
+    { label: "Suspended", value: "suspended", icon: <Ban className="w-4 h-4 text-red-500" />, count: stats.suspendedUsers },
   ];
 
   const paymentFilterOptions = [
-    { label: "Paid Users", value: "paid", icon: <CreditCard className="w-4 h-4 text-violet-500" />, count: pagePaidCount },
-    { label: "Free Users", value: "free", icon: <User className="w-4 h-4 text-gray-500" />, count: users.length - pagePaidCount },
+    { label: "Paid Users", value: "paid", icon: <CreditCard className="w-4 h-4 text-violet-500" />, count: stats.paidUsers },
+    { label: "Free Users", value: "free", icon: <User className="w-4 h-4 text-gray-500" />, count: stats.freeUsers },
   ];
 
   const activeFiltersCount = 
     (searchQuery ? 1 : 0) + 
     (statusFilter.length > 0 ? 1 : 0) + 
     (paymentFilter.length > 0 ? 1 : 0) +
-    (sortKey ? 1 : 0);
+    (sortKey && sortKey !== "createdAt" ? 1 : 0);
 
   const handleResetFilters = () => {
-    setStatusFilter([]);
-    setPaymentFilter([]);
+    setIsFromIITBhuFilter(undefined);
+    setIsPaidUserFilter(undefined);
+    setIsSuspendedFilter(undefined);
+    setHasPhoneFilter(undefined);
     setSearchQuery("");
-    setSortKey(null);
-    setSortDirection(null);
+    setSortKey("createdAt");
+    setSortDirection("desc");
     setPage(1);
   };
 
@@ -606,18 +592,18 @@ export default function UsersPage() {
                             title="Status"
                             options={statusFilterOptions}
                             selectedValues={statusFilter}
-                            onChange={setStatusFilter}
+                            onChange={handleStatusFilterChange}
                           />
                           <DataTableFilter
                             title="Payment"
                             options={paymentFilterOptions}
                             selectedValues={paymentFilter}
-                            onChange={setPaymentFilter}
+                            onChange={handlePaymentFilterChange}
                           />
                         </DataTableToolbar>
 
                         {/* Table content */}
-                        {filteredAndSortedUsers.length === 0 ? (
+                        {users.length === 0 ? (
                           <DataTableEmpty
                             icon={<Search className="w-8 h-8 text-muted-foreground" />}
                             title="No results found"
@@ -683,7 +669,7 @@ export default function UsersPage() {
                                 </TableRow>
                               </TableHeader>
                               <TableBody>
-                                {filteredAndSortedUsers.map((user) => (
+                                {users.map((user) => (
                                   <TableRow key={user.id} className="group border-border/50">
                                     <TableCell>
                                       <div className="flex items-center gap-4">
@@ -823,7 +809,7 @@ export default function UsersPage() {
                         )}
 
                         {/* Pagination */}
-                        {filteredAndSortedUsers.length > 0 && (
+                        {users.length > 0 && (
                           <div className="flex items-center justify-between px-4 py-4 border-t border-border/50">
                             <p className="text-sm text-muted-foreground">
                               Showing {((page - 1) * pagination.limit) + 1} to {Math.min(page * pagination.limit, pagination.totalCount)} of {pagination.totalCount} users
